@@ -1,0 +1,29 @@
+{
+  "name": "toulouse",
+  "version": "0.0.1",
+  "description": "UI toolkit",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist",
+    "/public"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prepare": "npm run build",
+    "clean": "rm -rf dist node_modules"
+  },
+  "keywords": [
+    "ui",
+    "toolkit"
+  ],
+  "author": "Sebastiaan Visser",
+  "license": "ISC",
+  "dependencies": {
+    "@types/react": "^16.9.32",
+    "@types/react-dom": "^16.9.6",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  }
+}
