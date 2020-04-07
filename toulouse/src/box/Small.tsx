@@ -1,0 +1,17 @@
+import { createContext, useContext } from 'react'
+import { className } from '../styling/Css'
+
+export interface SmallProps {
+  small?: boolean
+}
+
+export const SmallContext = createContext(false)
+
+export const useSmall = () => useContext(SmallContext)
+
+export const useResolvedeSmall = (props: SmallProps) => {
+  const small = useContext(SmallContext)
+  return props.small || small
+}
+
+export const smallC = className(`vaiant-small`)
