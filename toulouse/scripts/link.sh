@@ -2,8 +2,8 @@
 
 pushd node_modules
 rm -rf react react-dom
-ln -s ../../toulouse-demo/node_modules/react
-ln -s ../../toulouse-demo/node_modules/react-dom
+ln -s ../../toulouse-docs/node_modules/react
+ln -s ../../toulouse-docs/node_modules/react-dom
 popd
 
 yarn unlink

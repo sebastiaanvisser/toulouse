@@ -1,13 +1,12 @@
 import React, { ReactNode, useEffect, useState } from 'react'
-import { Dimensions } from '../lib/Geometry'
-import { useStateDeepEquals } from '../lib/Hooks'
-import { once } from '../lib/Memo'
-import { useValue, Var } from '../lib/Var'
-import { className, cx, px } from '../styling/Css'
 import { Box, BoxProps } from '../box/Box'
 import { SmallProps } from '../box/Small'
 import { useVariantClass, VariantProps } from '../box/Variant'
 import { FocusProps, useFocusableProps } from '../dyn/Focus'
+import { Dimensions } from '../lib/Geometry'
+import { useStateDeepEquals } from '../lib/Hooks'
+import { useValue, Var } from '../lib/Var'
+import { className, cx, px } from '../styling/Css'
 
 export interface Pos {
   line: number
@@ -50,8 +49,6 @@ export function Input(props: Props) {
   const { onFocus, onBlur, ref } = useFocusableProps({ ...props, native: true }, elem)
   const value = useValue(props.value)
   const variantC = useVariantClass(props)
-
-  const { inputC, multilineC, singlelineC, fauxC, containerC, PrimaryC } = Styles.get()
 
   useEffect(() => {
     if (selection) {
@@ -153,74 +150,63 @@ export function Input(props: Props) {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  const inputC = className('input')
-  const fauxC = className('faux')
-  const PrimaryC = className('Primary')
+const inputC = className('input')
+const fauxC = className('faux')
+const PrimaryC = className('Primary')
 
-  const multilineC = className('multiline')
-  const singlelineC = className('singleline')
+const multilineC = className('multiline')
+const singlelineC = className('singleline')
 
-  const containerC = className('input-container').style({
-    position: 'relative',
-    flexGrow: 1
-  })
-
-  inputC.style({
-    display: 'block',
-    width: '100%',
-    boxSizing: 'border-box',
-    resize: 'none',
-    margin: '0',
-
-    border: 'none',
-    outline: 'none',
-    background: 'none',
-
-    color: 'inherit',
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word'
-  })
-
-  inputC.self('::placeholder').style({
-    color: '#c0c9cc' // TODO
-  })
-
-  fauxC.style({
-    position: 'absolute',
-    top: 0,
-    pointerEvents: 'none',
-    visibility: 'hidden'
-  })
-
-  PrimaryC.sub(fauxC).style({
-    visibility: 'visible'
-  })
-
-  // PrimaryC.sub(multilineC.or(singlelineC)).style({
-  //   ...({ '-webkit-text-fill-color': White.alpha(0.2).toString() } as any)
-  // })
-
-  containerC
-    .not(s => s.firstChild())
-    .child(inputC)
-    .style({
-      paddingLeft: px(0)
-    })
-
-  containerC
-    .not(s => s.lastChild())
-    .child(inputC)
-    .style({
-      paddingRight: px(0)
-    })
-
-  return {
-    containerC,
-    PrimaryC,
-    inputC,
-    multilineC,
-    singlelineC,
-    fauxC
-  }
+const containerC = className('input-container', {
+  position: 'relative',
+  flexGrow: 1
 })
+
+inputC.style({
+  display: 'block',
+  width: '100%',
+  boxSizing: 'border-box',
+  resize: 'none',
+  margin: '0',
+
+  border: 'none',
+  outline: 'none',
+  background: 'none',
+
+  color: 'inherit',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word'
+})
+
+inputC.self('::placeholder').style({
+  color: '#c0c9cc' // TODO
+})
+
+fauxC.style({
+  position: 'absolute',
+  top: 0,
+  pointerEvents: 'none',
+  visibility: 'hidden'
+})
+
+PrimaryC.sub(fauxC).style({
+  visibility: 'visible'
+})
+
+// PrimaryC.sub(multilineC.or(singlelineC)).style({
+//   ...({ '-webkit-text-fill-color': White.alpha(0.2).toString() } as any)
+// })
+
+containerC
+  .not(s => s.firstChild())
+  .child(inputC)
+  .style({
+    paddingLeft: px(0)
+  })
+
+containerC
+  .not(s => s.lastChild())
+  .child(inputC)
+  .style({
+    paddingRight: px(0)
+  })

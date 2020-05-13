@@ -13,6 +13,7 @@ FIXES
 - Listbox/virtual should not re-shallow render items already in view.
 - Dyn-sized virtual list items?
 - Both HOVER and FOCUS should have default behavior: border/bg/outline/glow?
+- Fix the grow/shrink defaults for h/v.
 
 -------------------------------------------------------------------------------
 NICE TO HAVE

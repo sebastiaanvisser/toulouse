@@ -23,7 +23,6 @@ export function InlineDemo() {
   const hasFocus = useValue(focus)
 
   const content = (needle: string, c: boolean) => {
-    const { PrimaryC } = Styles.get()
     const casei = (s: string) => (c ? s.toLowerCase() : s)
     needle = casei(needle)
     return lorem(8)
@@ -36,7 +35,7 @@ export function InlineDemo() {
               blunt
               button
               palette={Primary}
-              className={cx(PrimaryC)}
+              className={cx(primaryC)}
               attach={balloon(s)}
             >
               <>{s}</>
@@ -99,6 +98,4 @@ export function InlineDemo() {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  return { PrimaryC: style({ padding: '0 4px' }) }
-})
+const primaryC = style({ padding: '0 4px' })

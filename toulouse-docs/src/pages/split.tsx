@@ -1,7 +1,7 @@
-import React, { FC, useEffect, useState } from 'react'
+import React, { FC, useState } from 'react'
 import { Box, BoxProps, Unit } from 'toulouse/box'
-import { Cross, Dot, Pulse, Shape, Tag, Tick } from 'toulouse/icon'
-import { once, Once } from 'toulouse/lib'
+import { Cross, Dot, Pulse, Shape, Tag, Tick, ChevronRight } from 'toulouse/icon'
+import { Once } from 'toulouse/lib'
 import {
   Arctic,
   Contrast,
@@ -15,6 +15,7 @@ import {
   Shade
 } from 'toulouse/styling'
 import { Img, Label, Panel, Spinner } from 'toulouse/widget'
+import Link from 'next/link'
 
 rule('body', 'html').style({
   position: 'relative',
@@ -53,7 +54,7 @@ const Line = (
   )
 }
 
-export const SplitTest: FC = () => {
+const SplitTest: FC = () => {
   const Foo = (props: BoxProps) => (
     <Panel v width={240} pad={5} {...props}>
       <Box v sep>
@@ -92,16 +93,28 @@ export const SplitTest: FC = () => {
   )
 
   return (
-    <Box h>
-      <Panel pad={Unit * 2} h center bg={Hover}>
-        <Foo palette={Arctic} rounded elevate />
-      </Panel>
-      <Panel pad={Unit * 2} h center bg={Hover.alpha(0.25)}>
-        <Foo palette={Ocean} rounded elevate />
-      </Panel>
-      <Panel pad={Unit * 2} h center>
-        <Foo palette={Fog} rounded />
-      </Panel>
+    <Box v>
+      <Box h margin palette={Shade} bg blunt>
+        <Img img={ChevronRight} />
+        <Label>
+          <Link href="/">
+            <a>index</a>
+          </Link>
+        </Label>
+      </Box>
+      <Box h>
+        <Panel shrink={false} pad={Unit * 2} h center bg={Hover}>
+          <Foo palette={Arctic} rounded elevate />
+        </Panel>
+        <Panel shrink={false} pad={Unit * 2} h center bg={Hover.alpha(0.25)}>
+          <Foo palette={Ocean} rounded elevate />
+        </Panel>
+        <Panel shrink={false} pad={Unit * 2} h center>
+          <Foo palette={Fog} rounded />
+        </Panel>
+      </Box>
     </Box>
   )
 }
+
+export default SplitTest

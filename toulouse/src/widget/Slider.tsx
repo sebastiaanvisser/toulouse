@@ -7,7 +7,6 @@ import * as Con from '../dyn/Constraint'
 import { DragState, useDrag } from '../dyn/Drag'
 import { FocusProps, useFocusableProps } from '../dyn/Focus'
 import { pt } from '../lib/Geometry'
-import { once } from '../lib/Memo'
 import { Range, range } from '../lib/Range'
 import { useControlledVar, useValue, Var } from '../lib/Var'
 import { Hover, PrimaryColor } from '../styling'
@@ -83,7 +82,7 @@ export const Slider = React.memo((props: SliderProps & BoxProps) => {
     <Box
       rel
       {...focusableProps}
-      className={cx(className, Styles.get())}
+      className={cx(className, sliderC)}
       attach={() => <Slider_ {...props} small={small} />}
       onKeyDown={onKeyDown(props)}
       height={small ? SmallerUnit : Unit}
@@ -281,4 +280,4 @@ export function Slider_(props: SliderProps & Context) {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => className('slider', { userSelect: 'none' }))
+const sliderC = className('slider', { userSelect: 'none' })

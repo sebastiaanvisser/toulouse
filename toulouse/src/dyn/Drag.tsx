@@ -3,7 +3,6 @@ import { DependencyList, useRef } from 'react'
 import { measureAbsolute, measureRelative } from '../box/Measure'
 import { useEvent, useValue } from '../lib'
 import { Geom, Point, pt, Rect, rect } from '../lib/Geometry'
-import { once } from '../lib/Memo'
 import { Var } from '../lib/Var'
 import { className, cx } from '../styling/Css'
 import { anyDirection, Constraint, Direction, free, noDirection, run } from './Constraint'
@@ -254,28 +253,22 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  const leftC = className('left')
-  const topC = className('top')
-  const rightC = className('right')
-  const bottomC = className('bottom')
+const leftC = className('left')
+const topC = className('top')
+const rightC = className('right')
+const bottomC = className('bottom')
 
-  leftC.style({ cursor: 'w-resize' })
-  topC.style({ cursor: 'n-resize' })
-  rightC.style({ cursor: 'e-resize' })
-  bottomC.style({ cursor: 's-resize' })
+leftC.style({ cursor: 'w-resize' })
+topC.style({ cursor: 'n-resize' })
+rightC.style({ cursor: 'e-resize' })
+bottomC.style({ cursor: 's-resize' })
 
-  topC.self(leftC).style({ cursor: 'nw-resize' })
-  topC.self(rightC).style({ cursor: 'ne-resize' })
-  bottomC.self(leftC).style({ cursor: 'sw-resize' })
-  bottomC.self(rightC).style({ cursor: 'se-resize' })
-
-  return { leftC, topC, rightC, bottomC }
-})
+topC.self(leftC).style({ cursor: 'nw-resize' })
+topC.self(rightC).style({ cursor: 'ne-resize' })
+bottomC.self(leftC).style({ cursor: 'sw-resize' })
+bottomC.self(rightC).style({ cursor: 'se-resize' })
 
 export function resizableClasses(dir: Direction): string {
-  const { leftC, topC, rightC, bottomC } = Styles.get()
-
   return cx(
     dir.left && leftC,
     dir.top && topC,

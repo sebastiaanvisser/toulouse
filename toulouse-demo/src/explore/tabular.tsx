@@ -146,16 +146,16 @@ export class Tabular extends React.Component {
 // ----------------------------------------------------------------------------
 
 const Styles = memo1((p: Palette) => {
-  const containerC = className('container').style({
+  const containerC = className('container', {
     height: pct(100)
   })
 
-  const tableC = className('my-virtual').style({
+  const tableC = className('my-virtual', {
     borderCollapse: 'collapse',
     borderSpacing: 0
   })
 
-  const cellC = className('my-cell').style({
+  const cellC = className('my-cell', {
     display: 'inline-block',
     position: 'relative',
     minWidth: px(30),
@@ -168,7 +168,7 @@ const Styles = memo1((p: Palette) => {
     // backgroundColor: `${arctic.panel.Hover.alpha(1)}`
   })
 
-  const selectedC = className('selected').style({
+  const selectedC = className('selected', {
     backgroundColor: p.Blue.alpha(0.05).toString(),
     boxShadow: [
       `0 0 0 1px ${p.Blue.toString()}`,

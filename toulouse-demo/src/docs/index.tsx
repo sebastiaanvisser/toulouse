@@ -31,14 +31,12 @@ import {
 } from 'toulouse/styling'
 import { Img, Input, Label, Panel, Sep } from 'toulouse/widget'
 
-const GlobalCSS = once(() =>
-  rule('body', 'html').style({
-    position: 'relative',
-    height: '100%',
-    margin: '0',
-    padding: '0'
-  })
-)
+rule('body', 'html').style({
+  position: 'relative',
+  height: '100%',
+  margin: '0',
+  padding: '0'
+})
 
 export const Documentation: FC = () => {
   const input = useVar(
@@ -46,7 +44,6 @@ export const Documentation: FC = () => {
   )
   const input2 = useVar('ipsum')
   const focus = useVar([false, false, false, false, false, false])
-  useEffect(() => void GlobalCSS.get(), [])
 
   const f0 = useValue(focus.at(0))
   const foo = (

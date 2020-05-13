@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Geom } from '../lib/Geometry'
-import { memo1, once } from '../lib/Memo'
+import { memo1 } from '../lib/Memo'
 import { className, cx, px } from '../styling/Css'
 
 export interface ElementGeom {
@@ -61,11 +61,10 @@ export function sizedStyle(props: SizedProps): React.CSSProperties {
 }
 
 export function sizedClass({ abs, rel, fit, z, clip }: SizedProps) {
-  const { absC, relC } = Styles.get()
   return cx(
     abs && absC,
     rel && relC,
-    clip && clipC.get(),
+    clip && clipC,
     z !== undefined && z !== false && zIndexC.get(z === true ? 1 : z),
     typeof fit === 'number' ? fitC.get(fit) : fit === true ? fitC.get(0) : undefined
   )
@@ -73,11 +72,9 @@ export function sizedClass({ abs, rel, fit, z, clip }: SizedProps) {
 
 // ----------------------------------------------------------------------------
 
-const clipC = once(() =>
-  className(`clip`).style({
-    overflow: 'hidden'
-  })
-)
+const clipC = className(`clip`).style({
+  overflow: 'hidden'
+})
 
 const zIndexC = memo1((z: number) =>
   className(`z${z}`).style({
@@ -95,8 +92,5 @@ const fitC = memo1((m: number) =>
   })
 )
 
-const Styles = once(() => {
-  const absC = className('abs').style({ position: 'absolute' })
-  const relC = className('rel').style({ position: 'relative' })
-  return { absC, relC }
-})
+const absC = className('abs', { position: 'absolute' })
+const relC = className('rel', { position: 'relative' })

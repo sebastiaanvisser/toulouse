@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { ReactElement, ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
-import { v4 } from 'uuid'
 import { range } from '../lib'
 import { BezierPoint, Point } from '../lib/Geometry'
 import { Classy, cx } from '../styling/Css'
@@ -15,7 +14,7 @@ export const shapeAsSvg = (
   style?: React.CSSProperties
 ) => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    // xmlns="http://www.w3.org/2000/svg"
     style={{ ...style, display: 'block' }}
     className={cx(className)}
     width={width}
@@ -44,6 +43,8 @@ export type Tr =
   | { tag: 'mask'; mask: Shape }
   | { tag: 'rounded'; rounded: {} }
   | { tag: 'named'; name: string }
+
+let Counter = 0
 
 export class Shape {
   _name?: string
@@ -90,7 +91,7 @@ export class Shape {
   mask = (...mask: Shape[]) => this.extend({ tag: 'mask', mask: layers(...mask) })
 
   name(): string {
-    if (!this._name) this._name = v4()
+    if (!this._name) this._name = `n${Counter++}`
     return this._name
   }
 
@@ -141,7 +142,7 @@ export class Shape {
   }
 
   static mask(mask: Shape, invert: boolean, children: ReactNode) {
-    const id = `mask-${randomId()}`
+    const id = `mask-${Counter++}`
     const bg = invert ? 'black' : 'white'
     const fg = invert ? Rgba.White : Rgba.Black
     return (
@@ -163,7 +164,7 @@ export class Shape {
     rot: number | [Point, Point] | undefined,
     children: ReactNode
   ) {
-    const id = `gradient-${randomId()}`
+    const id = `gradient-${Counter++}`
 
     const pos =
       rot instanceof Array
@@ -193,13 +194,6 @@ export class Shape {
     )
   }
 }
-
-const randomId = () =>
-  `####-####`.replace(/#/g, function (c) {
-    var r = (Math.random() * 16) | 0,
-      v = c === '#' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
 
 export const layers = (...cs: (ReactElement<any> | Shape)[]) =>
   new Shape({ tag: 'id' }, ...cs)

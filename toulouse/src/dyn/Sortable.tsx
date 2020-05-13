@@ -3,8 +3,7 @@ import ReactDOM from 'react-dom'
 import { Box, BoxProps } from '../box/Box'
 import { getMargin, measureAbsolute } from '../box/Measure'
 import { useValue } from '../lib'
-import { Geom, Rect, geom } from '../lib/Geometry'
-import { once } from '../lib/Memo'
+import { Geom, geom, Rect } from '../lib/Geometry'
 import { Var } from '../lib/Var'
 import { className, cx, important, px, style } from '../styling/Css'
 import { Constraint, free } from './Constraint'
@@ -70,7 +69,6 @@ interface SortableProps {
 // ----------------------------------------------------------------------------
 
 export function SortableContainer(props: SortableProps & BoxProps) {
-  const { containerC, animateC } = Styles.get()
   const { h, manager, height, width, className, children, ...rest } = props
 
   const size = useValue(manager.prop('geom').map(g => g && (h ? g.width : g.height)))
@@ -114,7 +112,6 @@ function Ghost(props: SortableProps & { h?: boolean; manager: Var<Manager> }) {
 
   const from = start.toGeom()
   const { left, top, bottom, right } = st.targetGeom.toRect()
-  const { ghostC } = Styles.get()
 
   let g = place.toGeom()
 
@@ -219,8 +216,6 @@ export function SortableItem(props: SortableItemProps) {
     return st ? st.dragSt.stage === 'idle' : true
   }
 
-  const { hideC } = Styles.get()
-
   const constraint1 = () => {
     const { state, geom, itemGeom } = manager.get()
     const stage = state ? state.dragSt.stage : 'idle'
@@ -279,37 +274,33 @@ export function SortableItem(props: SortableItemProps) {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  const containerC = className('container').style({
-    userSelect: 'none'
-  })
-
-  const animateC = className()
-
-  animateC.child().style({
-    transition: 'transform 200ms ease'
-  })
-
-  const hideC = style({
-    position: 'absolute',
-    pointerEvents: 'none',
-    width: important(0),
-    height: important(0),
-    minWidth: important(0),
-    minHeight: important(0),
-    margin: important(0),
-    opacity: 0,
-    zoom: 0
-  })
-
-  const ghostC = className('ghostC')
-
-  ghostC
-    .not(x => x.self('.update'))
-    .style({
-      margin: important(0),
-      transition: ['left 200ms ease', 'top 200ms ease'].join()
-    })
-
-  return { containerC, animateC, ghostC, hideC }
+const containerC = className('container', {
+  userSelect: 'none'
 })
+
+const animateC = className()
+
+animateC.child().style({
+  transition: 'transform 200ms ease'
+})
+
+const hideC = style({
+  position: 'absolute',
+  pointerEvents: 'none',
+  width: important(0),
+  height: important(0),
+  minWidth: important(0),
+  minHeight: important(0),
+  margin: important(0),
+  opacity: 0,
+  zoom: 0
+})
+
+const ghostC = className('ghostC')
+
+ghostC
+  .not(x => x.self('.update'))
+  .style({
+    margin: important(0),
+    transition: ['left 200ms ease', 'top 200ms ease'].join()
+  })

@@ -89,19 +89,15 @@ export type DemoDef = {
   demo?: () => React.ReactNode
 }
 
-const GlobalCSS = once(() =>
-  rule('body', 'html').style({
-    position: 'relative',
-    height: '100%',
-    margin: '0',
-    padding: '0'
-  })
-)
+rule('body', 'html').style({
+  position: 'relative',
+  height: '100%',
+  margin: '0',
+  padding: '0'
+})
 
 export function Tk() {
   const [v, setV] = useState(true)
-
-  useEffect(() => void GlobalCSS.get(), [])
 
   const destruct = () => {
     setV(false)

@@ -153,7 +153,6 @@ interface BlockProps {
 function Block(props: BlockProps) {
   const { box, constraint, draggable, resizable } = props
   const { palette, icon, st } = box
-  const { blockC } = Styles.get()
 
   const [target, setTarget] = useState<HTMLElement>()
   const hoverDir = useRef<Var<C.Direction>>(new Var({})).current
@@ -187,24 +186,9 @@ function Block(props: BlockProps) {
       palette={palette}
       elem={setTarget}
       geom={geom}
-      className={cx(blockC, resizableClasses(hd))}
+      className={cx(resizableClasses(hd))}
     >
       <Img zoom={Math.round(Math.min(geom.width, geom.height) / 30)} img={icon} />
     </Panel>
   )
 }
-
-const Styles = once(() => {
-  // const anim = '100ms ease-in'
-  const blockC = style({
-    transition: [
-      // `left ${anim}`,
-      // `top ${anim}`,
-      // `width ${anim}`,
-      // `height ${anim}`
-      //
-    ].join()
-  })
-
-  return { blockC }
-})

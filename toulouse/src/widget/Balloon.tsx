@@ -113,7 +113,8 @@ export class BalloonRegistry {
   stack: RegEntry[] = []
 
   constructor() {
-    document.addEventListener('keydown', this.onKeyDown, true)
+    if (typeof window !== 'undefined')
+      document.addEventListener('keydown', this.onKeyDown, true)
   }
 
   top(): RegEntry | undefined {

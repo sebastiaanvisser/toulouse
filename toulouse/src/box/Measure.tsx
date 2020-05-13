@@ -12,7 +12,10 @@ export interface MeasureProps {
 export type AttachProps = { target: HTMLElement; abs: Geom }
 
 export const AttachCtx = createContext<AttachProps>({
-  target: window.document.documentElement,
+  target:
+    typeof window !== 'undefined'
+      ? window.document.documentElement
+      : ((undefined as any) as HTMLElement),
   abs: geom(0, 0, 0, 0)
 })
 

@@ -1,10 +1,9 @@
 import React, { Fragment, ReactNode } from 'react'
-import { eqOn, groupBy } from '../lib/Grouping'
-import { once } from '../lib/Memo'
-import { className, cx, pct, px, rule } from '../styling/Css'
 import { Box, BoxProps } from '../box/Box'
 import { FlexStyles } from '../box/Flexed'
 import { useVariantClass, VariantProps } from '../box/Variant'
+import { eqOn, groupBy } from '../lib/Grouping'
+import { className, cx, pct, px, rule } from '../styling/Css'
 import { ImageStyle } from './Image'
 
 export interface LabelProps {
@@ -22,9 +21,9 @@ export function Label(props: Props) {
   const variantC = useVariantClass(props)
 
   const className = cx(
-    LabelStyling.get(),
-    center && CenterStyling.get(),
-    ellipsis && EllipsisStyling.get(),
+    labelC,
+    center && centerC,
+    ellipsis && ellipsisC,
     variantC,
     props.className
   )
@@ -79,46 +78,38 @@ export function childrenToLabel(children: ReactNode): ReactNode {
 
 // ----------------------------------------------------------------------------
 
-const LabelStyling = once(() => {
-  const labelC = className('label', {
-    margin: '0',
-    boxSizing: 'border-box',
-    overflow: 'auto'
-  })
-
-  const { horizontalC } = FlexStyles.get()
-  const imgC = ImageStyle.get()
-
-  horizontalC.child(imgC.sibling(labelC).or(labelC.sibling(imgC))).style({
-    marginLeft: px(-5)
-  })
-
-  const bold = labelC.sub('b').or(labelC.sub('strong'))
-  bold.style({ fontWeight: 500 })
-
-  labelC.sub(rule('p').firstChild()).style({ marginTop: 0 })
-  labelC.sub(rule('p').lastChild()).style({ marginBottom: 0 })
-
-  labelC.sub(rule('h1').or(rule('h2'))).style({
-    margin: 0,
-    fontWeight: 500
-  })
-
-  return labelC
+const labelC = className('label', {
+  margin: '0',
+  boxSizing: 'border-box',
+  overflow: 'auto'
 })
 
-const CenterStyling = once(() =>
-  className('center').style({
-    textAlign: 'center'
-  })
-)
+const { horizontalC } = FlexStyles
+const { imgC } = ImageStyle
 
-const EllipsisStyling = once(() =>
-  className('ellipsis').style({
-    display: 'block',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    width: pct(100)
-  })
-)
+horizontalC.child(imgC.sibling(labelC).or(labelC.sibling(imgC))).style({
+  marginLeft: px(-5)
+})
+
+const bold = labelC.sub('b').or(labelC.sub('strong'))
+bold.style({ fontWeight: 500 })
+
+labelC.sub(rule('p').firstChild()).style({ marginTop: 0 })
+labelC.sub(rule('p').lastChild()).style({ marginBottom: 0 })
+
+labelC.sub(rule('h1').or(rule('h2'))).style({
+  margin: 0,
+  fontWeight: 500
+})
+
+const centerC = className('center', {
+  textAlign: 'center'
+})
+
+const ellipsisC = className('ellipsis', {
+  display: 'block',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  width: pct(100)
+})

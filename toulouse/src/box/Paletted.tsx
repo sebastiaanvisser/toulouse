@@ -1,9 +1,8 @@
-import React, { createContext, CSSProperties, FC, useContext } from 'react'
+import { createContext, CSSProperties, useContext } from 'react'
 import { memo1 } from '../lib/Memo'
 import { Color } from '../styling/Color'
 import { className, cx } from '../styling/Css'
 import { Arctic, Palette } from '../styling/Palette'
-import { Box, BoxProps } from './Box'
 
 export const PaletteContext = createContext<Palette>(Arctic)
 
@@ -16,18 +15,6 @@ export interface PalettedProps {
 export const useResolvedPalette = ({ palette }: PalettedProps): Palette => {
   const current = useContext(PaletteContext)
   return (palette instanceof Function ? palette(current) : palette) || current
-}
-
-const Provider = PaletteContext.Provider
-
-export const SetPalette: FC<PalettedProps & BoxProps> = props => {
-  const { palette, ...rest } = props
-  const provide = useResolvedPalette(props)
-  return (
-    <Provider value={provide}>
-      <Box fg {...rest} />
-    </Provider>
-  )
 }
 
 // ----------------------------------------------------------------------------

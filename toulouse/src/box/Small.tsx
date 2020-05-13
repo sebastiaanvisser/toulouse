@@ -14,4 +14,4 @@ export const useResolvedeSmall = (props: SmallProps) => {
   return props.small || small
 }
 
-export const smallC = className(`vaiant-small`)
+export const smallC = className(`small`)

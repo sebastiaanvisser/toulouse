@@ -1,10 +1,10 @@
 import * as React from 'react'
-import { useResolvedeSmall, SmallerUnit } from '../box'
+import { SmallerUnit, useResolvedeSmall } from '../box'
 import { Box, BoxProps, Unit } from '../box/Box'
 import { pieSlice } from '../icon/Icons'
 import { array, circleShape, layers } from '../icon/Shape'
 import { Point, pt } from '../lib/Geometry'
-import { memo1, once } from '../lib/Memo'
+import { memo1 } from '../lib/Memo'
 import { Rgba } from '../styling'
 import { className, cx, keyframes } from '../styling/Css'
 import { Img } from '../widget'
@@ -97,14 +97,12 @@ const byType = {
 // ----------------------------------------------------------------------------
 
 const spinnerC = memo1((speed: number = 500) =>
-  className('spinner').style({
-    animation: `${rotate360.get()} ${speed}ms linear infinite`
+  className('spinner', {
+    animation: `${rotate360} ${speed}ms linear infinite`
   })
 )
 
-export const rotate360 = once(() =>
-  keyframes({
-    0: { transform: 'rotate(0deg)' },
-    100: { transform: 'rotate(360deg)' }
-  })
-)
+export const rotate360 = keyframes({
+  0: { transform: 'rotate(0deg)' },
+  100: { transform: 'rotate(360deg)' }
+})

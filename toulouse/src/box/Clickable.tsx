@@ -1,4 +1,4 @@
-import { memo1, once } from '../lib/Memo'
+import { memo1 } from '../lib/Memo'
 import { Bg, Palette, Hover } from '../styling'
 import { className, cx } from '../styling/Css'
 import { PalettedProps, useResolvedPalette } from './Paletted'
@@ -11,7 +11,6 @@ export interface ClickableProps {
 export function useClickableClass(props: ClickableProps & PalettedProps, bg = true) {
   const palette = useResolvedPalette(props)
   const { button, disabled } = props
-  const { clickableC, disabledC } = ClickableStyling.get()
   return cx(
     button && bg && hoverBgC.get(palette),
     button && clickableC,
@@ -21,10 +20,35 @@ export function useClickableClass(props: ClickableProps & PalettedProps, bg = tr
 
 // ----------------------------------------------------------------------------
 
+const clickableC = className('clickable')
+const disabledC = className('disabled')
+const hoveringSel = clickableC.hover().not(s => s.active())
+const activeSel = clickableC.active()
+
+export const ClickableStyling = {
+  clickableC,
+  disabledC,
+  hoveringSel,
+  activeSel
+}
+
+clickableC.style({
+  userSelect: 'none',
+  cursor: 'pointer'
+})
+
+disabledC.style({
+  pointerEvents: 'none',
+  userSelect: 'none',
+  cursor: 'auto'
+})
+
+disabledC.child().style({
+  opacity: 0.35
+})
+
 export const hoverBgC = memo1((p: Palette) => {
   const hoverC = className(`bg-hover-${p.name}`)
-
-  const { clickableC, hoveringSel, activeSel } = ClickableStyling.get()
 
   hoverC.self(clickableC).style({
     transition: 'background 200ms ease'
@@ -39,34 +63,4 @@ export const hoverBgC = memo1((p: Palette) => {
   })
 
   return hoverC
-})
-
-export const ClickableStyling = once(() => {
-  const clickableC = className('clickable')
-  const disabledC = className('disabled')
-
-  clickableC.style({
-    userSelect: 'none',
-    cursor: 'pointer'
-  })
-
-  disabledC.style({
-    pointerEvents: 'none',
-    userSelect: 'none',
-    cursor: 'auto'
-  })
-
-  disabledC.child().style({
-    opacity: 0.35
-  })
-
-  const hoveringSel = clickableC.hover().not(s => s.active())
-  const activeSel = clickableC.active()
-
-  return {
-    clickableC,
-    disabledC,
-    hoveringSel,
-    activeSel
-  }
 })

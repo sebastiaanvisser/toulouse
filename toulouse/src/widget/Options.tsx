@@ -4,7 +4,7 @@ import { useResolvedPalette } from '../box/Paletted'
 import { FocusProps, useFocusableProps } from '../dyn/Focus'
 import { Blob, Circle, gshape, Tick } from '../icon/Icons'
 import { circleShape, layers, Shape } from '../icon/Shape'
-import { Memo, memo1, once } from '../lib/Memo'
+import { Memo, memo1 } from '../lib/Memo'
 import { useValue, Var } from '../lib/Var'
 import { Palette } from '../styling'
 import { className, cx } from '../styling/Css'
@@ -37,7 +37,6 @@ interface ToggleProps extends BoxProps, FocusProps {
 export function Toggle(props: ToggleProps) {
   const { disabled, checked, focus } = props
   const { children, image, onClick, ref, ...rest } = props
-  const checkboxC = Styles.get()
   const focusableProps = useFocusableProps(props)
 
   const palette = useResolvedPalette(props)
@@ -172,8 +171,5 @@ const radioImage = memo1(
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  const checkboxC = className('checkbox')
-  checkboxC.focus().style({ outline: 'none' })
-  return checkboxC
-})
+const checkboxC = className('checkbox')
+checkboxC.focus().style({ outline: 'none' })

@@ -1,7 +1,59 @@
-import React, { useEffect, CSSProperties } from 'react'
-import { pt } from '../lib/Geometry'
+import React, { CSSProperties, useEffect } from 'react'
 import { Rgba } from './Rgba'
-import { Var } from '../lib'
+import { pt } from '../lib/Geometry'
+import { Var } from '../lib/Var'
+
+// --------------------------------------------------------------------------------
+
+export interface Stylesheet {
+  rules: Rule[]
+  keyframes: Keyframe[]
+}
+
+export interface CssInstalled {
+  nameCounter: number
+  server: number
+  skipped: number
+  client: number
+}
+
+export interface CssRegister {
+  pending: Stylesheet
+  installed: CssInstalled
+}
+
+export const CssRegister: CssRegister = {
+  pending: {
+    rules: [],
+    keyframes: []
+  },
+  installed: {
+    nameCounter: 0,
+    server: 0,
+    skipped: 0,
+    client: 0
+  }
+}
+
+// --------------------------------------------------------------------------------
+// SETUP
+
+if (typeof window !== 'undefined') {
+  const nextData = (window as any).__NEXT_DATA__
+
+  const { server, nameCounter } = nextData.props.cssInstalled
+
+  CssRegister.installed = {
+    nameCounter: 0,
+    server,
+    skipped: 0,
+    client: 0
+  }
+
+  console.log(`Using prerendered CSS: ${nameCounter} class names, ${server} rules`)
+}
+
+// --------------------------------------------------------------------------------
 
 export interface EmptySelector {
   empty: {}
@@ -41,10 +93,10 @@ export type Selector =
   | SubSelector
   | SiblingSelector
 
-const toSel = (x: Rule | Selector): Selector => (x instanceof Rule ? x.sel : x)
+const toSelector = (x: Rule | Selector): Selector => (x instanceof Rule ? x.sel : x)
 
 export class Rule<S extends Selector = Selector> {
-  public props: React.CSSProperties = {}
+  public props: CSSProperties = {}
 
   constructor(public sel: S) {
     pushRule(this)
@@ -52,34 +104,34 @@ export class Rule<S extends Selector = Selector> {
 
   selector = () => printSelector(this.sel)
 
-  style(props: React.CSSProperties): Rule<S> {
+  style(props: CSSProperties): this {
     this.props = { ...this.props, ...props }
     return this
   }
 
   or = (...xs: (Rule | Selector)[]): Rule<Selector> =>
     new Rule({
-      or: [this.sel, ...xs.map(toSel)]
+      or: [this.sel, ...xs.map(toSelector)]
     })
 
   self = (...xs: (Rule | Selector)[]): Rule<Selector> =>
     new Rule({
-      self: [this.sel, ...xs.map(toSel)]
+      self: [this.sel, ...xs.map(toSelector)]
     })
 
   child = (...xs: (Rule | Selector)[]): Rule<Selector> =>
     new Rule({
-      child: [this.sel, ...(xs.length === 0 ? ['*'] : xs.map(toSel))]
+      child: [this.sel, ...(xs.length === 0 ? ['*'] : xs.map(toSelector))]
     })
 
   sub = (...xs: (Rule | Selector)[]): Rule<Selector> =>
     new Rule({
-      sub: [this.sel, ...(xs.length === 0 ? ['*'] : xs.map(toSel))]
+      sub: [this.sel, ...(xs.length === 0 ? ['*'] : xs.map(toSelector))]
     })
 
   sibling = (...xs: (Rule | Selector)[]): Rule<Selector> =>
     new Rule({
-      sibling: [this.sel, ...(xs.length === 0 ? ['*'] : xs.map(toSel))]
+      sibling: [this.sel, ...(xs.length === 0 ? ['*'] : xs.map(toSelector))]
     })
 
   // Shortcuts
@@ -94,6 +146,7 @@ export class Rule<S extends Selector = Selector> {
   before = () => this.self('::before')
   after = () => this.self('::after')
 
+  // TODO: test
   not = (neg: Rule | ((r: Rule) => Rule)): Rule<Selector> => {
     if (neg instanceof Function) {
       return this.self(`:not(${printSelector(neg(new Rule({ empty: {} })).sel)})`)
@@ -105,99 +158,124 @@ export class Rule<S extends Selector = Selector> {
   tail = () => this.not(s => s.firstChild())
   init = () => this.not(s => s.lastChild())
 
-  static or = (...xs: (Rule | Selector)[]) =>
-    new Rule({
-      or: xs.map(toSel)
-    })
+  static or = (...xs: (Rule | Selector)[]) => new Rule({ or: xs.map(toSelector) })
 }
 
 export class ClassName extends Rule<{ class: string }> {
   toString() {
     return this.sel.class
   }
+
+  name(className: string) {
+    this.sel.class = className
+    return this
+  }
 }
 
 // ----------------------------------------------------------------------------
 // Collecting
 
-let Counter = 0
-
 export function className(prefix: string = 'c', obj?: React.CSSProperties) {
-  const c = new ClassName({ class: `${prefix}-${Counter++}` })
+  const c = new ClassName({ class: `${prefix}-${CssRegister.installed.nameCounter++}` })
   return obj ? c.style(obj) : c
 }
 
 export const style = (obj: React.CSSProperties): ClassName => className().style(obj)
 
-export const rule = (x: Rule | Selector, ...xs: (Rule | Selector)[]) =>
-  (x instanceof Rule ? x : new Rule<Selector>(x)).or(...xs)
+export const rule = (...xs: (Rule | Selector)[]) => Rule.or(...xs)
 
 export const px = (p: number) => `${p}px`
 export const pct = (p: number) => `${p}%`
 export const commas = (...xs: string[]) => xs.join()
 
 // ----------------------------------------------------------------------------
-// Installing
 
-interface CSS {
-  installed: {
-    rules: Rule[]
-    keyframes: Keyframe[]
-  }
-  pending: {
-    rules: Rule[]
-    keyframes: Keyframe[] //
-  }
+const keyframeName = (prefix: string = 'kf') =>
+  `${prefix}-${CssRegister.installed.nameCounter++}`
+
+type Frames = { [pct: number]: React.CSSProperties }
+
+interface Keyframe {
+  name: string
+  frames: Frames
 }
 
-const CSS: CSS = ((window as any).__CSS = {
-  installed: { rules: [], keyframes: [] },
-  pending: { rules: [], keyframes: [] }
-})
+export function keyframes(frames: Frames): string {
+  const name = keyframeName()
+  pushKeyframe({ name, frames })
+  return name
+}
 
-function pushRule(sheet: Rule) {
-  CSS.pending.rules.push(sheet)
-  install()
+// ----------------------------------------------------------------------------
+// Installing
+
+function pushRule(rule: Rule) {
+  CssRegister.pending.rules.push(rule)
+  if (typeof window !== 'undefined') installInBrowser()
 }
 
 function pushKeyframe(keyframe: Keyframe) {
-  CSS.pending.keyframes.push(keyframe)
-  install()
+  CssRegister.pending.keyframes.push(keyframe)
+  if (typeof window !== 'undefined') installInBrowser()
 }
 
-const InstallCount = new Var(0)
+// Server side rendering
+
+export function serverSideRenderCss(): {
+  css: string
+  cssInstalled: CssInstalled
+} {
+  const sheet = CssRegister.pending
+  const css = printStylesheet(sheet).join('\n\n')
+
+  CssRegister.installed.server = sheet.rules.length + sheet.keyframes.length
+  const cssInstalled = CssRegister.installed
+
+  return { css, cssInstalled }
+}
+
+const InstallTrigger = new Var(0)
+
+export const useCssInstalled = (callback: (count: number) => void) =>
+  useEffect(() => InstallTrigger.debounce().effect(callback), [])
 
 let frameId = -1
-function install() {
+function installInBrowser() {
   cancelAnimationFrame(frameId)
   frameId = window.requestAnimationFrame(() => {
-    const { rules, keyframes } = CSS.pending
-    CSS.pending.rules = []
-    CSS.pending.keyframes = []
-    CSS.installed.rules = CSS.installed.rules.concat(rules)
-    CSS.installed.keyframes = CSS.installed.keyframes.concat(keyframes)
-    installStyleSheet(rules, keyframes, InstallCount.get())
-    InstallCount.modify(c => c + 1)
+    installStyleSheet(CssRegister.pending, InstallTrigger.get())
+    CssRegister.pending.rules = []
+    CssRegister.pending.keyframes = []
+    InstallTrigger.modify(c => c + 1)
   })
 }
 
-export const useCssInstalled = (callback: (count: number) => void) =>
-  useEffect(() => InstallCount.debounce().effect(callback), [])
+function installStyleSheet(sheet: Stylesheet, index: number) {
+  const { rules, keyframes } = sheet
 
-function installStyleSheet(rules: Rule[], keyframes: Keyframe[], index: number) {
-  const timer = `installing ${rules.length} style rule${
-    rules.length === 1 ? '' : 's'
-  } [${index}]`
+  const { server, skipped } = CssRegister.installed
+  const pending = rules.length + keyframes.length
+  const skipping = Math.min(pending, server - skipped)
+  const installing = pending - skipping
+
+  CssRegister.installed.skipped += skipping
+  CssRegister.installed.client += installing
+
+  const timer = `skipping ${skipping} and installing ${installing} style rule(s) [${index}]`
   console.time(timer)
+
+  if (installing === 0) {
+    console.timeEnd(timer)
+    return
+  }
+
+  const css = printStylesheet(sheet).join('\n\n')
 
   const head = document.head || document.getElementsByTagName('head')[0]
   const styleTag = document.createElement('style')
   styleTag.type = 'text/css'
   head.appendChild(styleTag)
 
-  const css1 = printSheet(rules)
-  const css2 = printKeyframes(keyframes)
-  const css = `${css1}\n\n${css2}`
   styleTag.innerText = css
   window.localStorage.setItem(`stylesheet_${index}`, css)
 
@@ -207,16 +285,22 @@ function installStyleSheet(rules: Rule[], keyframes: Keyframe[], index: number) 
 // ----------------------------------------------------------------------------
 // Printing to CSS
 
-function printSheet(sheet: Rule[]) {
-  return sheet
-    .map(printRule)
-    .filter(v => v.length)
-    .join('\n\n')
+function printStylesheet(sheet: Stylesheet): string[] {
+  const { rules, keyframes } = sheet
+  return printRules(rules).concat(printKeyframes(keyframes))
 }
 
-const printRule = (rule: Rule) => `${rule.selector()} ${printProperties(rule.props)}`
+function printRules(sheet: Rule[]): string[] {
+  return sheet.map(printRule)
+}
 
-function printProperties(props: React.CSSProperties) {
+function printRule(rule: Rule): string {
+  const sel = rule.selector()
+  const props = printProperties(rule.props)
+  return `${sel} ${props}`
+}
+
+function printProperties(props: CSSProperties) {
   let out = []
   for (let key in props) {
     out.push(printProperty(key, (props as any)[key]))
@@ -240,11 +324,26 @@ function printSelector1(s: Selector): string {
   return s
 }
 
-function printProperty(key: string, value: string) {
+function printProperty(key: string, value: string): string {
   return `  ${toSnakeCase(key)}: ${value};`
 }
 
-// ----------------------------------------------------------------------------
+function toSnakeCase(input: string) {
+  if (input[0] === '-') return input
+  return input
+    .replace(/[A-Z]/g, v => '-' + v.toLowerCase())
+    .replace(/^[-]*/, '')
+    .replace(/[-]*$/, '')
+}
+
+function printKeyframes(keyframes: Keyframe[]): string[] {
+  return keyframes.map(({ name, frames }) => {
+    const perFrame = Object.entries(frames).map(
+      ([percentage, props]) => `${percentage}% ${printProperties(props)}`
+    )
+    return `@keyframes ${name} {\n${perFrame.join('\n')}\n}`
+  })
+}
 
 function normalizeSelector(s: Selector): Selector {
   const xs = liftOr(s)
@@ -298,14 +397,6 @@ const cartesion = <A, B, C>(f: (x: A, y: B) => C, xs: A[], ys: B[]): C[] =>
 // ----------------------------------------------------------------------------
 // Utils
 
-function toSnakeCase(input: string) {
-  if (input[0] === '-') return input
-  return input
-    .replace(/[A-Z]/g, v => '-' + v.toLowerCase())
-    .replace(/^[-]*/, '')
-    .replace(/[-]*$/, '')
-}
-
 export type Classy1 = string | string[] | boolean | ClassName | undefined
 export type Classy = string | Classy1[] | boolean | ClassName | undefined
 
@@ -338,31 +429,3 @@ export const rightRadius = (r: string): CSSProperties => ({
   borderTopRightRadius: r,
   borderBottomRightRadius: r
 })
-
-// ----------------------------------------------------------------------------
-
-const keyframeName = (prefix: string = 'kf') => `${prefix}-${Counter++}`
-
-type Frames = { [pct: number]: React.CSSProperties }
-
-interface Keyframe {
-  name: string
-  frames: Frames
-}
-
-export function keyframes(frames: Frames): string {
-  const name = keyframeName()
-  pushKeyframe({ name, frames })
-  return name
-}
-
-export function printKeyframes(keyframes: Keyframe[]): string {
-  return keyframes
-    .map(({ name, frames }) => {
-      const perFrame = Object.entries(frames).map(
-        ([percentage, props]) => `${percentage}% ${printProperties(props)}`
-      )
-      return `@keyframes ${name} {\n${perFrame.join('\n')}\n}`
-    })
-    .join('\n\n')
-}

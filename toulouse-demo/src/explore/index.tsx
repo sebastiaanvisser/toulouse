@@ -21,14 +21,12 @@ const ExampleDocuments: Document[] = [
 
 // ----------------------------------------------------------------------------
 
-const GlobalCSS = once(() =>
-  rule('body', 'html').style({
-    position: 'relative',
-    height: '100%',
-    margin: '0',
-    padding: '0'
-  })
-)
+rule('body', 'html').style({
+  position: 'relative',
+  height: '100%',
+  margin: '0',
+  padding: '0'
+})
 
 export function Explore() {
   const fgPalette = usePalette()
@@ -38,8 +36,6 @@ export function Explore() {
   const activeDocumentTab = useVar(ExampleDocuments[0].name)
   const palette = useVar(Ocean)
   const grid = useVar(false)
-
-  useEffect(() => void GlobalCSS.get(), [])
 
   const nextTheme = () =>
     palette.modify(

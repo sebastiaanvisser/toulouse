@@ -65,23 +65,28 @@ export class Editor<A> {
 
 // ----------------------------------------------------------------------------
 
-export const W = ((window as any).__W = {
-  effects: 0,
-  upstream: 0,
-  downstream: 0,
-  debug: () =>
-    console.log(
-      'e',
-      W.effects,
-      W.effects === 0 ? '[good]' : '[bad]',
-      'd',
-      W.downstream,
-      W.downstream === 0 ? '[good]' : '[bad]',
-      'u',
-      W.upstream,
-      '[good]'
-    )
-})
+export const W =
+  typeof window !== 'undefined'
+    ? ((window as any).__W = {
+        effects: 0,
+        upstream: 0,
+        downstream: 0,
+        debug: () => {
+          if (W)
+            console.log(
+              'e',
+              W.effects,
+              W.effects === 0 ? '[good]' : '[bad]',
+              'd',
+              W.downstream,
+              W.downstream === 0 ? '[good]' : '[bad]',
+              'u',
+              W.upstream,
+              '[good]'
+            )
+        }
+      })
+    : undefined
 
 // ----------------------------------------------------------------------------
 
@@ -130,13 +135,13 @@ export class Var<A> implements Value<A> {
 
   effect(cb: Listener<A>, run = false): Uninstaller {
     this.effects.push(cb)
-    W.effects++
+    if (W) W.effects++
     const ix = this.effects.length - 1
     this.install()
     if (run === true) cb(this.get(), undefined)
     return () => {
       delete this.effects[ix]
-      W.effects--
+      if (W) W.effects--
       Var.trim(this.effects)
       this.uninstall()
     }
@@ -144,23 +149,23 @@ export class Var<A> implements Value<A> {
 
   listenUp(cb: Listener<A>): Uninstaller {
     this.upstreams.push(cb)
-    W.upstream++
+    if (W) W.upstream++
     const ix = this.upstreams.length - 1
     return () => {
       delete this.upstreams[ix]
-      W.upstream--
+      if (W) W.upstream--
       Var.trim(this.upstreams)
     }
   }
 
   listenDown(cb: Listener<A>): Uninstaller {
     this.downstreams.push(cb)
-    W.downstream++
+    if (W) W.downstream++
     const ix = this.downstreams.length - 1
     this.install()
     return () => {
       delete this.downstreams[ix]
-      W.downstream--
+      if (W) W.downstream--
       Var.trim(this.downstreams)
       this.uninstall()
     }

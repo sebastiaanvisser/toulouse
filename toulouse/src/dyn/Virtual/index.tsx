@@ -1,22 +1,21 @@
 import React, { useEffect, useState } from 'react'
+import { BoxProps, ElementGeom } from '../../box'
+import { Box } from '../../box/Box'
 import { range } from '../../lib'
 import {
   Dimensions,
   dimensions,
   geom,
   Geom,
-  Sided,
-  sidedAsRect,
   rect,
-  Rect
+  Rect,
+  Sided,
+  sidedAsRect
 } from '../../lib/Geometry'
 import { useDebounce, useStateDeepEquals, useWindowEvent } from '../../lib/Hooks'
-import { once } from '../../lib/Memo'
 import { className, cx, pct, px } from '../../styling/Css'
-import { Box } from '../../box/Box'
 import { Data, Grid, Grouped, RenderContainer } from './Grid'
 import { RenderCell, RenderRow } from './Row'
-import { ElementGeom, BoxProps } from '../../box'
 
 export * from './Grid'
 export * from './Measure'
@@ -192,8 +191,6 @@ export function Virtual<A, G = number>(props: Props<A, G>) {
   const viewport = computeVieport(scroll, dim, overflow)
   const region = computeRegion(viewport, data, block, { colWidth, rowHeight }, pad)
 
-  const { debugC, worldC, virtualC } = Styles.get()
-
   const snapshot = () => {
     if (!elem) return
     const { dim, scroll } = snapshotElem(elem)
@@ -244,24 +241,20 @@ export function Virtual<A, G = number>(props: Props<A, G>) {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  const virtualC = className('virtual').style({
-    transform: 'translate3d(0, 0, 0)',
-    width: pct(100),
-    height: pct(100),
-    minHeight: px(30),
-    overflow: 'auto',
-    flex: '1 1 auto'
-  })
+const virtualC = className('virtual', {
+  transform: 'translate3d(0, 0, 0)',
+  width: pct(100),
+  height: pct(100),
+  minHeight: px(30),
+  overflow: 'auto',
+  flex: '1 1 auto'
+})
 
-  const worldC = className('world').style({
-    position: 'relative'
-  })
+const worldC = className('world', {
+  position: 'relative'
+})
 
-  const debugC = className('world').style({
-    boxShadow: 'inset 0 0 0 1px red, 0 0 0 1px green',
-    pointerEvents: 'none'
-  })
-
-  return { virtualC, worldC, debugC }
+const debugC = className('world', {
+  boxShadow: 'inset 0 0 0 1px red, 0 0 0 1px green',
+  pointerEvents: 'none'
 })

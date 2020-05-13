@@ -17,7 +17,7 @@ const Style = memo1(
       zIndex: 1
     })
 
-    const { horizontalC, verticalC } = FlexStyles.get()
+    const { horizontalC, verticalC } = FlexStyles
 
     horizontalC.child(sepC).style({
       width: px(1),
@@ -49,8 +49,8 @@ export function useSepClass(props: SepProps & PalettedProps) {
 }
 
 const SepStyle = memo1((p: Palette) => {
-  const { horizontalC, verticalC } = FlexStyles.get()
-  const { clickableC } = ClickableStyling.get()
+  const { horizontalC, verticalC } = FlexStyles
+  const { clickableC } = ClickableStyling
   const sepC = className('sep')
 
   sepC.child().style({ position: 'relative' })

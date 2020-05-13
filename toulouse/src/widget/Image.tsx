@@ -11,10 +11,9 @@ import {
 import { SmallProps, useResolvedeSmall } from '../box/Small'
 import { Blob } from '../icon/Icons'
 import { layers, rect, Shape, shapeAsSvg } from '../icon/Shape'
-import { memo4, Once, once } from '../lib/Memo'
+import { memo4, Once } from '../lib/Memo'
 import { Color } from '../styling/Color'
-import { className, cx, Rule, style } from '../styling/Css'
-import { FontStyles } from '../styling/Fonts'
+import { className, cx, px, Rule, style } from '../styling/Css'
 import { Rgba } from '../styling/Rgba'
 
 export const offsetAsIcon = (shape: Shape) => shape.d(Unit / 2, Unit / 2)
@@ -52,13 +51,7 @@ export const Img = React.memo((props: Props) => {
       width || Unit,
       height || Unit,
       shape,
-      cx(
-        ImageStyle.get(),
-        small && !zoom && smallC.get(),
-        fgClass,
-        clickableClass,
-        className
-      ),
+      cx(imgC, small && !zoom && smallC, fgClass, clickableClass, className),
       { ...paletteStyle, zoom }
     )
 
@@ -80,31 +73,35 @@ export const Img = React.memo((props: Props) => {
 
 // ----------------------------------------------------------------------------
 
-export const ImageStyle = once(() => {
-  const { uiFontS } = FontStyles.get()
-  const { clickableC, hoveringSel } = ClickableStyling.get()
-
-  const imgC = className('icon')
-
-  imgC.style({
-    flexShrink: 0,
-    strokeWidth: 0,
-    ...uiFontS.props,
-    fontWeight: 500
-  })
-
-  const fg = (s: Rule) => s.selfOrSub(imgC).selfOrSub('.fg')
-
-  fg(clickableC).style({
-    transition: 'transform 200ms ease-out',
-    transformOrigin: '15px 15px'
-  })
-  fg(hoveringSel).style({ transform: 'scale(1.15)' })
-
-  return imgC
+// TODO: reuse from label?
+const uiFontS = className('ui-font', {
+  fontFamily: "'Ubuntu', 'Open Sans', 'Helvetica', sans-serif",
+  fontSize: px(13),
+  lineHeight: px(20)
 })
 
-const smallC = once(() => style({ zoom: `calc(20 / 30)` }))
+const { clickableC, hoveringSel } = ClickableStyling
+
+const imgC = className('icon')
+
+imgC.style({
+  flexShrink: 0,
+  strokeWidth: 0,
+  ...uiFontS.props,
+  fontWeight: 500
+})
+
+const fg = (s: Rule) => s.selfOrSub(imgC).selfOrSub('.fg')
+
+fg(clickableC).style({
+  transition: 'transform 200ms ease-out',
+  transformOrigin: '15px 15px'
+})
+fg(hoveringSel).style({ transform: 'scale(1.15)' })
+
+const smallC = style({ zoom: `calc(20 / 30)` })
+
+export const ImageStyle = { imgC }
 
 // ----------------------------------------------------------------------------
 

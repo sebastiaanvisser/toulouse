@@ -61,7 +61,6 @@ export function DragExamples(props: Props) {
   const { bg, settings } = props
 
   const st = useValue(settings)
-  const { allowSmallC } = Styles.get()
 
   useDrag(
     {
@@ -113,7 +112,6 @@ export function DragExamples(props: Props) {
 
   const obstacles = () => {
     const { frame1, frame2, bar1, bar2, stick, snap, lines } = st
-    const { lineC, allowSmallC } = Styles.get()
     const os = Obstacles
     return (
       <>
@@ -247,16 +245,12 @@ export function DragSettings({ settings }: { settings: Var<Settings> }) {
 
 // ----------------------------------------------------------------------------
 
-const Styles = once(() => {
-  const lineC = style({
-    minWidth: 'auto',
-    minHeight: 'auto'
-  })
+const lineC = style({
+  minWidth: 'auto',
+  minHeight: 'auto'
+})
 
-  const allowSmallC = style({
-    minWidth: 'auto',
-    minHeight: 'auto'
-  })
-
-  return { lineC, allowSmallC }
+const allowSmallC = style({
+  minWidth: 'auto',
+  minHeight: 'auto'
 })
