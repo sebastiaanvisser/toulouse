@@ -221,6 +221,10 @@ export class Var<A> implements Value<A> {
       : undefined
   }
 
+  assume<B>(this: Var<B | undefined>): Var<B> {
+    return this as Var<B>
+  }
+
   or<B>(this: Var<B | undefined>, def: B): Var<B> {
     return this.zoom(
       a => (is(a) ? a : def),
