@@ -1,0 +1,44 @@
+-------------------------------------------------------------------------------
+FIXES
+-------------------------------------------------------------------------------
+
+- Separators aren't nicely centered.
+     Using gradient again? meh
+     Allow thicker and subtle separators?
+- Proper grouping of list selection — actually fixes issues
+- FIX focus mess in country list.
+    plus: the focus TODO in Demo4 of inputs
+- fix the empty selector issue (!)
+- Borders/Separators and Hover should be distinct. See Sky theme
+- Listbox/virtual should not re-shallow render items already in view.
+- Dyn-sized virtual list items?
+- Both HOVER and FOCUS should have default behavior: border/bg/outline/glow?
+- Fix the grow/shrink defaults for h/v.
+
+-------------------------------------------------------------------------------
+NICE TO HAVE
+-------------------------------------------------------------------------------
+
+- Rethink attachments.
+- allow arrays/colors etc by default with toString or join
+- Sized props should support pct/string/css prop, not just number
+- width/height should allow range for min/max
+
+-------------------------------------------------------------------------------
+DEPLOY
+-------------------------------------------------------------------------------
+
+- Static css building
+    Don't use memo but deterministically register style blocks.
+- Overlay element is hardcoded now
+- either parametrize or introduce ourselves
+
+-------------------------------------------------------------------------------
+NEW FEATURES
+-------------------------------------------------------------------------------
+
+- Responsive sections with columns, and a mobile profile.
+- Scroll Indicators
+- demo: yarn add highlight.js (syntax highlighting)
+- Scroll-box/Pagination
+- JS/SVG Animations using hooks

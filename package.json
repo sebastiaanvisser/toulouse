@@ -11,8 +11,9 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "prepare": "npm run build",
-    "clean": "rm -rf dist node_modules"
+    "postinstall": "./scripts/post-install.sh",
+    "clean": "rm -rf dist node_modules",
+    "link-dist": "./scripts/link.sh"
   },
   "keywords": [
     "ui",
@@ -20,10 +21,22 @@
   ],
   "author": "Sebastiaan Visser",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
+    "@types/immutable": "^3.8.7",
+    "@types/lodash.isequal": "^4.5.5",
+    "@types/node": "^14.0.13",
     "@types/react": "^16.9.32",
     "@types/react-dom": "^16.9.6",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "@types/uuid": "^7.0.2",
+    "@types/xxhashjs": "^0.2.2",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "immutable": "^4.0.0-rc.12",
+    "lodash.isequal": "^4.5.0",
+    "react": "16.13.1",
+    "react-dom": "16.13.1",
+    "uuid": "^7.0.3",
+    "xxhashjs": "^0.2.2"
   }
 }
