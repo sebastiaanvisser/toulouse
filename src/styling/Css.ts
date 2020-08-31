@@ -27,7 +27,7 @@ export const CssRegister: CssRegister = {
   config: { enableSSR: true },
   collected: [],
   log: {
-    counter: 1,
+    counter: 0,
     server: 0
   }
 }
