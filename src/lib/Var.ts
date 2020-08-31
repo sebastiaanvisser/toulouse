@@ -256,7 +256,7 @@ export class Var<A> implements Value<A> {
     )
   }
 
-  find<B>(this: Var<B[]>, p: (b: B) => boolean): Var<B | undefined> {
+  find<B>(this: Var<List<B>>, p: (b: B) => boolean): Var<B | undefined> {
     return this.zoom(
       a => a.find(p),
       (b, a) => (b ? a.map(c => (p(c) ? b : c)) : a.filter(c => !p(c)))
