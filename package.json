@@ -1,6 +1,6 @@
 {
   "name": "toulouse",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "UI toolkit",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,9 +9,8 @@
     "/public"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && yarn pack --filename=latest.tgz",
     "watch": "tsc -w",
-    "postinstall": "./scripts/post-install.sh",
     "clean": "rm -rf dist node_modules",
     "link-dist": "./scripts/link.sh"
   },
