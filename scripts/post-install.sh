@@ -1,8 +1,9 @@
 #!/bin/sh
 
-if [ ! -d dist/ ] && [ ! -d .git/ ]
+if [ ! -d dist/ ] && [ ! -d .git/ ] && [ ! -d node_modules/ ]
 then
-  yarn run build
+  npm install
+  npm run build
   mv dist/* .
   rm -r src/
 else
