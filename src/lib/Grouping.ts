@@ -34,14 +34,3 @@ export function groupBy<A>(xs: A[], eq: Eq<A> = isEqual): A[][] {
 }
 
 export const groupOn = <A>(xs: A[], on: (a: A) => Prim) => groupBy(xs, eqOn(on))
-
-export const sortAndGroupOn = <A>(xs: A[], on: (a: A) => Prim) =>
-  groupOn(sortOn(xs, on), on)
-
-// ----------------------------------------------------------------------------
-
-export function uniq<A>(xs: A[], eq: Eq<A> = isEqual): A[] {
-  const out: A[] = []
-  xs.forEach(x => !!out.find(y => eq(x, y)) || out.push(x))
-  return out
-}

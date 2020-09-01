@@ -1,9 +1,12 @@
 import React, { CSSProperties } from 'react'
-import { ClickableStyling } from '../box/Clickable'
-import { FlexStyles } from '../box/Flexed'
-import { PalettedProps, usePalette, useResolvedPalette } from '../box/Paletted'
+import { clickableC } from '../box/Clickable'
+import { horizontalC, verticalC } from '../box/Flexed'
+import { usePalette } from '../box/Themed'
 import { memo1 } from '../lib/Memo'
-import { className, cx, Palette, px, Rule } from '../styling'
+import { cx, px } from '../styling/Classy'
+import { Palette } from '../styling/Palette'
+import { className } from '../styling/Rule'
+import { FirstChild } from '../styling/Selector'
 
 // ----------------------------------------------------------------------------
 // Standalone separator element.
@@ -11,7 +14,7 @@ import { className, cx, Palette, px, Rule } from '../styling'
 export interface SepProps {
   dashed?: boolean | number
   size?: number
-  pad?: number
+  pad?: number | true
 }
 
 export function Sep(props: SepProps) {
@@ -22,15 +25,16 @@ export function Sep(props: SepProps) {
 
 const Style = memo1(
   (props: { palette: Palette } & SepProps) => {
-    const { palette, dashed = false, size = 1, pad = 0 } = props
-    const { horizontalC, verticalC } = FlexStyles
+    const { palette, dashed = false, size = 1 } = props
 
-    const sepC = className('sep')
+    const pad = props.pad === true ? 10 : props.pad === undefined ? 0 : props.pad
+
+    const sepC = className(`sep-${palette.name}`)
     sepC.style({ zIndex: 1 })
 
     if (dashed) {
       const dash = typeof dashed === 'number' ? dashed : 5
-      const clr = palette.Hover
+      const clr = palette.Hovering
       const d1 = px(dash)
       const d2 = px(2 * dash)
 
@@ -41,7 +45,7 @@ const Style = memo1(
       verticalC.child(sepC).style({ background: gradient(90) })
     } else {
       sepC.style({
-        backgroundColor: palette.Hover.toString()
+        backgroundColor: palette.Hovering.toString()
       })
     }
 
@@ -63,44 +67,40 @@ const Style = memo1(
 // ----------------------------------------------------------------------------
 // Separating multiple children in a box.
 
-export interface SeparatedProps {
+export interface Props {
   sep?: boolean
 }
 
-export function useSepClass(props: SeparatedProps & PalettedProps) {
-  const palette = useResolvedPalette(props)
+export function classes(props: Props, palette: Palette) {
   const { sep } = props
   return cx(sep && SepStyle.get(palette))
 }
 
 const SepStyle = memo1(
   (p: Palette) => {
-    const { horizontalC, verticalC } = FlexStyles
-    const { clickableC } = ClickableStyling
-    const sepC = className('sep')
+    const sepC = className(`sep-${p.name}`)
 
     sepC.children.style({ position: 'relative' })
 
     const shared: CSSProperties = {
-      transition: 'opacity 150ms ease',
       position: 'absolute',
       content: '""',
-      backgroundColor: p.Hover.toString(),
+      backgroundColor: p.Hovering.toString(),
       zIndex: 1,
       top: 0,
       left: 0
     }
 
-    sepC.children.not(Rule.firstChild).before.style(shared)
+    sepC.children.not(FirstChild).before.style(shared)
 
     sepC
       .self(verticalC)
-      .children.not(Rule.firstChild)
+      .children.not(FirstChild)
       .before.style({ right: 0, height: px(1) })
 
     sepC
       .self(horizontalC)
-      .children.not(Rule.firstChild)
+      .children.not(FirstChild)
       .before.style({ bottom: 0, width: px(1) })
 
     const hovering = sepC.children.self(clickableC.hover)

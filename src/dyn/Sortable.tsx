@@ -1,11 +1,11 @@
 import React, { createContext, ReactNode, useContext, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 import { Box, BoxProps } from '../box/Box'
-import { getMargin, measureAbsolute } from '../box/Measure'
-import { useValue } from '../lib'
-import { Geom, geom, Rect } from '../lib/Geometry'
-import { Var } from '../lib/Var'
-import { className, cx, important, px, style } from '../styling'
+import { Geom, Rect } from '../lib/Geometry'
+import { useValue, Var } from '../lib/Var'
+import { cx, important, px } from '../styling/Classy'
+import { style } from '../styling/Rule'
+import { getMargin, measureAbsolute } from './Attach'
 import { Constraint, free } from './Constraint'
 import { DragCallbacks, DragState, Stage, useDrag } from './Drag'
 
@@ -79,7 +79,8 @@ export function SortableContainer(props: SortableProps & BoxProps) {
   const container = (
     <Box
       h={h}
-      className={cx(className, containerC, animate && animateC)}
+      noselect
+      className={cx(className, animate && animateC)}
       height={h ? height : size}
       width={h ? size : width}
       elem={props.manager.prop('el').set}
@@ -110,14 +111,14 @@ function Ghost(props: SortableProps & { h?: boolean; manager: Var<Manager> }) {
 
   if (stage === 'idle') return null
 
-  const from = start.toGeom()
-  const { left, top, bottom, right } = st.targetGeom.toRect()
+  const from = start.asGeom
+  const { left, top, bottom, right } = st.targetGeom.asRect
 
-  let g = place.toGeom()
+  let g = place.asGeom
 
-  if (stage === 'cancel') g = start.toGeom()
+  if (stage === 'cancel') g = start.asGeom
   if (stage === 'finish')
-    g = geom(
+    g = new Geom(
       h ? (targetIx <= srcIx ? left : right - g.width) : from.left,
       h ? from.top : targetIx <= srcIx ? top : bottom - g.height,
       from.width,
@@ -149,8 +150,8 @@ const computeTransform = (dir: 'h' | 'v', index: number) => (
   if (dragSt.stage !== 'idle')
     if (index < srcIx ? targetIx <= index : targetIx < index)
       return dir === 'v'
-        ? `translate3d(0,${px(place.height() + (m.top + m.bottom))},0)`
-        : `translate3d(${px(place.width() + (m.left + m.right))},0,0)`
+        ? `translate3d(0,${px(place.height + (m.top + m.bottom))},0)`
+        : `translate3d(${px(place.width + (m.left + m.right))},0,0)`
 }
 
 function computeSortState(
@@ -263,7 +264,7 @@ export function SortableItem(props: SortableItemProps) {
   return (
     <Box
       {...props}
-      ref={el => setRef(el ?? undefined)}
+      elem={setRef}
       style={{ ...style, transform }}
       className={cx(hide && hideC)}
     >
@@ -274,12 +275,7 @@ export function SortableItem(props: SortableItemProps) {
 
 // ----------------------------------------------------------------------------
 
-const containerC = className('container', {
-  userSelect: 'none'
-})
-
-const animateC = className()
-
+const animateC = style()
 animateC.children.style({
   transition: 'transform 200ms ease'
 })
@@ -296,7 +292,7 @@ const hideC = style({
   zoom: 0
 })
 
-const ghostC = className('ghostC')
+const ghostC = style()
 
 ghostC.not('.update').style({
   margin: important(0),

@@ -1,19 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { BoxProps, ElementGeom } from '../../box'
-import { Box } from '../../box/Box'
-import { range } from '../../lib'
-import {
-  Dimensions,
-  dimensions,
-  geom,
-  Geom,
-  rect,
-  Rect,
-  Sided,
-  sidedAsRect
-} from '../../lib/Geometry'
+import { Box, BoxProps } from '../../box/Box'
+import { ElementGeom } from '../../box/Sized'
+import { Dimensions, Geom, Rect, Sides, SidesDef } from '../../lib/Geometry'
 import { useDebounce, useStateDeepEquals, useWindowEvent } from '../../lib/Hooks'
-import { className, cx, pct, px } from '../../styling'
+import { range } from '../../lib/Range'
+import { cx, pct, px } from '../../styling/Classy'
+import { style } from '../../styling/Rule'
 import { Data, Grid, Grouped, RenderContainer } from './Grid'
 import { RenderCell, RenderRow } from './Row'
 
@@ -24,9 +16,9 @@ export * from './Row'
 // ----------------------------------------------------------------------------
 
 function computeDimensions(data: Data<{}>): Dimensions {
-  if ('horizontal' in data) return dimensions(data.horizontal.length, 1)
-  if ('vertical' in data) return dimensions(1, data.vertical.length)
-  return dimensions(data.table[0]?.length ?? 0, data.table.length)
+  if ('horizontal' in data) return new Dimensions(data.horizontal.length, 1)
+  if ('vertical' in data) return new Dimensions(1, data.vertical.length)
+  return new Dimensions(data.table[0]?.length ?? 0, data.table.length)
 }
 
 function managedGeom<A>(data: Data<A>, g: ElementGeom): ElementGeom {
@@ -44,16 +36,16 @@ function computeVieport(
   scroll: Geom,
   dim: Dimensions,
   // pad: Sided | undefined,
-  overflow: Sided | undefined
+  overflow: SidesDef | undefined
 ): Geom {
-  const o = sidedAsRect(overflow || 0)
+  const o = new Sides(overflow ?? 0).asRect
 
-  return geom(
+  return new Geom(
     scroll.left - o.left,
     scroll.top - o.top,
     scroll.width + (o.left + o.right),
     scroll.height + (o.top + o.bottom)
-  ).clip(geom(0, 0, dim.width, dim.height))
+  ).clip(new Geom(0, 0, dim.width, dim.height))
 }
 
 const fitRegion = (vpx: Geom, span: Dimensions, measure: Measure, pad: Rect): Geom => {
@@ -75,40 +67,40 @@ const fitRegion = (vpx: Geom, span: Dimensions, measure: Measure, pad: Rect): Ge
     else g.top++
   }
 
-  return geom(g.left, g.top, g.width, g.height)
+  return new Geom(g.left, g.top, g.width, g.height)
 }
 
 function computeRegion<A>(
   viewport: Geom,
   data: Data<A>,
-  block: Sided | undefined,
+  block: SidesDef,
   measure: Measure,
   pad: Rect
 ) {
   const span = computeDimensions(data)
-  let fit = fitRegion(viewport, span, measure, pad).toRect()
+  let fit = fitRegion(viewport, span, measure, pad).asRect
 
-  const b = sidedAsRect(block || 1)
+  const b = new Sides(block || 1).asRect
 
-  fit = rect(
+  fit = new Rect(
     Math.floor(fit.left / b.left) * b.left,
     Math.floor(fit.top / b.top) * b.top,
     Math.ceil(fit.right / b.right) * b.right,
     Math.ceil(fit.bottom / b.bottom) * b.bottom
   )
 
-  return fit.toGeom().clip(
-    geom(0, 0, span.width, span.height) //
+  return fit.asGeom.clip(
+    new Geom(0, 0, span.width, span.height) //
   )
 }
 
 function snapshotElem(elem: HTMLElement) {
-  const dim = dimensions(
+  const dim = new Dimensions(
     elem.scrollWidth,
     elem.scrollHeight //
   )
 
-  const scroll = geom(
+  const scroll = new Geom(
     elem.scrollLeft,
     elem.scrollTop,
     elem.offsetWidth,
@@ -122,8 +114,8 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 
 function regionGeometry(region: Geom, measure: Measure): Geom {
   const { colWidth, rowHeight } = measure
-  const { left, top, right, bottom } = region.toRect()
-  return geom(
+  const { left, top, right, bottom } = region.asRect
+  return new Geom(
     sum(range(0, left).iterate().map(colWidth)),
     sum(range(0, top).iterate().map(rowHeight)),
     sum(range(left, right).iterate().map(colWidth)),
@@ -136,7 +128,7 @@ function worldDimensions<A>(data: Data<A>, measure: Measure): ElementGeom {
   const { width, height } = computeDimensions(data)
   const colWidths = range(0, width).iterate().map(colWidth)
   const rowHeights = range(0, height).iterate().map(rowHeight)
-  return managedGeom(data, dimensions(sum(colWidths), sum(rowHeights)))
+  return managedGeom(data, new Dimensions(sum(colWidths), sum(rowHeights)))
 }
 
 // ----------------------------------------------------------------------------
@@ -153,8 +145,8 @@ export interface VirtualProps<A> extends Measure {
 
   trigger?: any
   data: Data<A>
-  overflow?: Sided // in pixels
-  block?: Sided // in cells
+  overflow?: SidesDef // in pixels
+  block?: SidesDef // in cells
   debugOverlay?: boolean
 }
 
@@ -169,8 +161,8 @@ type Props<A, G> = VirtualProps<A> & Grouped<A, G> & BoxProps
 export function Virtual<A, G = number>(props: Props<A, G>) {
   const [elem, setElem] = useState<HTMLElement>()
   const [mode, setMode] = useState<'shallow' | 'full'>('full')
-  const [dim, setDim] = useStateDeepEquals(dimensions(0, 0))
-  const [scroll, setScroll] = useStateDeepEquals(geom(0, 0, 0, 0))
+  const [dim, setDim] = useStateDeepEquals(new Dimensions(0, 0))
+  const [scroll, setScroll] = useStateDeepEquals(new Geom(0, 0, 0, 0))
 
   const {
     data,
@@ -187,7 +179,7 @@ export function Virtual<A, G = number>(props: Props<A, G>) {
     ...rest
   } = props
 
-  const pad = sidedAsRect(props.pad ? (props.pad === true ? 10 : props.pad) : 0)
+  const pad = new Sides(props.pad ? (props.pad === true ? 10 : props.pad) : 0).asRect
   const viewport = computeVieport(scroll, dim, overflow)
   const region = computeRegion(viewport, data, block, { colWidth, rowHeight }, pad)
 
@@ -218,7 +210,7 @@ export function Virtual<A, G = number>(props: Props<A, G>) {
 
   return (
     <Box rel elem={setElem} className={cx(virtualC)} onScroll={update} {...rest}>
-      <Box className={cx(worldC)} {...worldDim}>
+      <Box rel {...worldDim}>
         <Box abs {...regionGeom} style={{ width, height }}>
           <Grid<A, G>
             data={data}
@@ -241,20 +233,16 @@ export function Virtual<A, G = number>(props: Props<A, G>) {
 
 // ----------------------------------------------------------------------------
 
-const virtualC = className('virtual', {
+const virtualC = style({
   transform: 'translate3d(0, 0, 0)',
   width: pct(100),
   height: pct(100),
   minHeight: px(30),
   overflow: 'auto',
   flex: '1 1 auto'
-})
+}).name('virtual')
 
-const worldC = className('world', {
-  position: 'relative'
-})
-
-const debugC = className('world', {
+const debugC = style({
   boxShadow: 'inset 0 0 0 1px red, 0 0 0 1px green',
   pointerEvents: 'none'
 })

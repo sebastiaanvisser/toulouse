@@ -17,7 +17,7 @@ export function useEvent<E extends HTMLElement, K extends keyof HTMLElementEvent
       el.addEventListener(type, listener, options)
       return () => el.removeEventListener(type, listener)
     }
-  }, deps)
+  }, [el, ...deps])
 }
 
 export function useDocumentEvent<K extends keyof DocumentEventMap>(
@@ -27,6 +27,7 @@ export function useDocumentEvent<K extends keyof DocumentEventMap>(
   cond?: boolean,
   options?: boolean | AddEventListenerOptions
 ) {
+  if (typeof window === 'undefined') return
   useEffect(() => {
     if (cond !== false) {
       document.addEventListener(type, listener, options)
@@ -42,6 +43,7 @@ export function useWindowEvent<K extends keyof WindowEventMap>(
   deps: DependencyList = [],
   options?: boolean | AddEventListenerOptions
 ) {
+  if (typeof window === 'undefined') return
   useEffect(() => {
     if (cond !== false) {
       window.addEventListener(type, listener, options)

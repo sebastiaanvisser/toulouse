@@ -2,13 +2,13 @@ import { Set } from 'immutable'
 import isEqual from 'lodash.isequal'
 import React, { MouseEvent, ReactNode, useRef } from 'react'
 import { Box, BoxProps } from '../box/Box'
+import { Theme } from '../box/Themed'
+import { Unit } from '../box/Unit'
 import { Virtual, VirtualProps } from '../dyn/Virtual'
-import { Prim } from '../lib'
 import { Point } from '../lib/Geometry'
+import { Prim } from '../lib/Grouping'
 import { range } from '../lib/Range'
 import { useValue, Value, Var } from '../lib/Var'
-import { Primary } from '../styling'
-import { Unit } from '../box/Unit'
 
 interface Many<Id> {
   multi: true
@@ -90,9 +90,11 @@ export const Listbox = <A, Id extends number | string>(props: Props<A, Id>) => {
     const { children, selected } = props
     if (renderGroup) return <>{renderGroup(children, selected)}</>
     return selected ? (
-      <Box bg sep clip shadow blunt palette={Primary} v z>
-        {children}
-      </Box>
+      <Theme primary>
+        <Box bg sep clip shadow blunt v z>
+          {children}
+        </Box>
+      </Theme>
     ) : (
       <Box sep clip v>
         {children}

@@ -1,7 +1,6 @@
 import React, { memo, ReactNode, useRef } from 'react'
-import { Point, pt } from '../../lib/Geometry'
-import { Dimensions, dimensions } from '../../lib/Geometry'
-import { Prim } from '../../lib'
+import { Point, Dimensions } from '../../lib/Geometry'
+import { Prim } from '../../lib/Grouping'
 
 export type RenderRow = (cells: ReactNode[], row: number) => ReactNode
 
@@ -89,8 +88,8 @@ export const Cell = memo(
     const mode = lastMode.current === 'full' ? 'full' : props.mode
     lastMode.current = mode
 
-    const dim = dimensions(colWidth(x), rowHeight(y))
-    return <>{renderCell(payload, pt(x, y), dim, mode, group)}</>
+    const dim = new Dimensions(colWidth(x), rowHeight(y))
+    return <>{renderCell(payload, new Point(x, y), dim, mode, group)}</>
   },
   (a, b) =>
     a.payload === b.payload &&

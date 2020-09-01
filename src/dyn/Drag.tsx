@@ -1,10 +1,11 @@
 import isEqual from 'lodash.isequal'
 import { DependencyList, useRef } from 'react'
-import { measureAbsolute, measureRelative } from '../box/Measure'
-import { useEvent, useValue } from '../lib'
-import { Geom, Point, pt, Rect, rect } from '../lib/Geometry'
-import { Var } from '../lib/Var'
-import { className, cx } from '../styling'
+import { Geom, Point, Rect } from '../lib/Geometry'
+import { useEvent } from '../lib/Hooks'
+import { useValue, Var } from '../lib/Var'
+import { cx } from '../styling/Classy'
+import { style } from '../styling/Rule'
+import { measureAbsolute, measureRelative } from './Attach'
 import { anyDirection, Constraint, Direction, free, noDirection, run } from './Constraint'
 
 export type Stage = 'start' | 'update' | 'cancel' | 'finish' | 'idle'
@@ -76,13 +77,13 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
 
     const abs = measureAbsolute(target)
     const measured = mode === 'rel' ? measureRelative(target) : abs
-    const start = measured.toRect()
-    const origin = abs.toRect().centroid()
+    const start = measured.asRect
+    const origin = abs.asRect.centroid
 
     const initial: DragState = {
       start,
       origin,
-      delta: pt(0, 0),
+      delta: new Point(0, 0),
       place: start,
       dir: {},
       stage: 'start',
@@ -94,15 +95,17 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
 
     onMouseMove(ev)
 
-    window.document.body.style.userSelect = 'none'
+    if (typeof window !== 'undefined') {
+      window.document.body.style.userSelect = 'none'
+    }
   }
 
   const onMouseDown = (ev: { clientX: number; clientY: number }) => {
     if (!target || (!draggable && !resizable)) return
 
-    const origin = pt(ev.clientX, ev.clientY)
-    const abs = measureAbsolute(target).toRect()
-    const start = mode === 'rel' ? measureRelative(target).toRect() : abs
+    const origin = new Point(ev.clientX, ev.clientY)
+    const abs = measureAbsolute(target).asRect
+    const start = mode === 'rel' ? measureRelative(target).asRect : abs
     const dir = resizable ? inResizeBorder(origin, abs) : {}
 
     if (!draggable && noDirection(dir)) return
@@ -112,7 +115,7 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
     const initial: DragState = {
       start,
       origin,
-      delta: pt(0, 0),
+      delta: new Point(0, 0),
       place: start,
       dir,
       type,
@@ -122,7 +125,9 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
     state.set(initial)
     if (onStart) onStart(initial)
 
-    window.document.body.style.userSelect = 'none'
+    if (typeof window !== 'undefined') {
+      window.document.body.style.userSelect = 'none'
+    }
   }
 
   const inResizeBorder = (p: Point, abs: Rect): Direction => {
@@ -143,8 +148,8 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
 
   const onTargetMove = (ev: { clientX: number; clientY: number }) => {
     if (!target || !hoverDir || !resizable) return
-    const abs = measureAbsolute(target).toRect()
-    const dir = inResizeBorder(pt(ev.clientX, ev.clientY), abs)
+    const abs = measureAbsolute(target).asRect
+    const dir = inResizeBorder(new Point(ev.clientX, ev.clientY), abs)
     hoverDir.set(dir)
   }
 
@@ -153,24 +158,23 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
   }
 
   const onMouseMove = (ev: { clientX: number; clientY: number }) => {
-    if (state.get()?.stage !== 'finish')
-      state.modify(st => {
-        if (!st) return
-        return update(
-          { ...st, stage: 'update' },
-          pt(ev.clientX, ev.clientY) //
-        )
-      })
+    state.modify(st => {
+      if (!st) return
+      return update(
+        { ...st, stage: 'update' },
+        new Point(ev.clientX, ev.clientY) //
+      )
+    })
   }
 
   const onMouseUp = (ev: { clientX: number; clientY: number }) => {
     state.modify(st => {
       if (!st) return
       st = { ...st, stage: 'finish' }
-      const updated = update(st, pt(ev.clientX, ev.clientY))
+      const updated = update(st, new Point(ev.clientX, ev.clientY))
       if (onFinish) onFinish(updated)
 
-      if (!isEqual(st.delta, pt(0, 0))) window.setTimeout(done, delayOut || 0)
+      if (!isEqual(st.delta, new Point(0, 0))) window.setTimeout(done, delayOut || 0)
       else requestAnimationFrame(() => done())
 
       return updated
@@ -194,7 +198,10 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
 
   const done = () => {
     state.total()?.prop('stage').set('idle')
-    window.document.body.style.userSelect = 'auto'
+
+    if (typeof window !== 'undefined') {
+      window.document.body.style.userSelect = 'auto'
+    }
 
     const st = state.get()
     if (st && onDone) onDone(st)
@@ -214,7 +221,7 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
       place = run(con(stage), start, to, dir)
     } else if (!noDirection(dir)) {
       const { left, right, top, bottom } = start
-      const to = rect(
+      const to = new Rect(
         dir.left ? Math.min(right, left + d.x) : left,
         dir.top ? Math.min(bottom, top + d.y) : top,
         dir.right ? Math.max(left, right + d.x) : right,
@@ -226,7 +233,7 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
 
     const updated = { ...st, delta: d, place }
 
-    if (geom) geom.set(place.toGeom())
+    if (geom) geom.set(place.asGeom)
     if (onUpdate) onUpdate(updated)
 
     return updated
@@ -242,25 +249,21 @@ export function useDrag(props: DragProps, deps: DependencyList = []) {
   useEvent(handle, 'mousemove', onTargetMove, !!hoverDir, [...deps, handle])
   useEvent(handle, 'mouseout', onTargetOut, !!hoverDir, [...deps, handle])
 
-  const { body } = document
-  useEvent(body, 'mouseup', onMouseUp, isBusy, [isBusy])
-  useEvent(body, 'mousemove', onMouseMove, isBusy, [isBusy])
-  useEvent(body, 'keydown', onKeyDown, isBusy, [isBusy])
+  if (typeof window !== 'undefined') {
+    useEvent(document.body, 'mouseup', onMouseUp, isBusy, [isBusy])
+    useEvent(document.body, 'mousemove', onMouseMove, isBusy, [isBusy])
+    useEvent(document.body, 'keydown', onKeyDown, isBusy, [isBusy])
+  }
 
   return state
 }
 
 // ----------------------------------------------------------------------------
 
-const leftC = className('left')
-const topC = className('top')
-const rightC = className('right')
-const bottomC = className('bottom')
-
-leftC.style({ cursor: 'w-resize' })
-topC.style({ cursor: 'n-resize' })
-rightC.style({ cursor: 'e-resize' })
-bottomC.style({ cursor: 's-resize' })
+const leftC = style({ cursor: 'w-resize' })
+const topC = style({ cursor: 'n-resize' })
+const rightC = style({ cursor: 'e-resize' })
+const bottomC = style({ cursor: 's-resize' })
 
 topC.self(leftC).style({ cursor: 'nw-resize' })
 topC.self(rightC).style({ cursor: 'ne-resize' })

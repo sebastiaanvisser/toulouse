@@ -1,12 +1,18 @@
-import React, { ReactNode, useEffect, useState } from 'react'
+import React, { ReactNode, useEffect, useRef, useState } from 'react'
 import { Box, BoxProps } from '../box/Box'
 import { SmallProps } from '../box/Small'
+import { usePalette } from '../box/Themed'
+import { Unit } from '../box/Unit'
 import { useVariantClass, VariantProps } from '../box/Variant'
-import { FocusProps, useFocusableProps } from '../dyn/Focus'
+import { measureAbsolute } from '../dyn/Attach'
+import { useFocus } from '../dyn/Focus'
 import { Dimensions } from '../lib/Geometry'
-import { useStateDeepEquals } from '../lib/Hooks'
-import { useValue, Var } from '../lib/Var'
-import { className, cx, px, Rule } from '../styling'
+import { memo1 } from '../lib/Memo'
+import { useValue, useVar, Var } from '../lib/Var'
+import { cx, px } from '../styling/Classy'
+import { Rgba } from '../styling/Rgba'
+import { style } from '../styling/Rule'
+import { FirstChild, LastChild } from '../styling/Selector'
 
 export interface Pos {
   line: number
@@ -27,43 +33,85 @@ export interface InputProps {
   className?: string
   placeholder?: string
   multiline?: boolean
-  Primary?: ReactNode
+  flexible?: boolean
+  autoselect?: boolean
+  autofocus?: boolean
+  highlight?: ReactNode
+  onGeom?: () => void
+  focus?: Var<boolean>
 }
 
-type Props = InputProps & BoxProps & FocusProps & SmallProps & VariantProps
+type Props = InputProps & BoxProps & SmallProps & VariantProps
 
 export function Input(props: Props) {
   const {
     multiline,
     className,
-    Primary,
+    highlight,
     selection,
     position,
     focus,
+    flexible,
+    autoselect,
+    autofocus,
     placeholder,
+    onGeom,
     ...rest
   } = props
 
+  const isFirst = useRef(true)
+  const [fauxElem, setFauxElem] = useState<HTMLElement>()
   const [elem, setElem] = useState<HTMLInputElement | HTMLTextAreaElement>()
-  const [dim, setDim] = useStateDeepEquals<Dimensions | undefined>(undefined)
-  const { onFocus, onBlur, ref } = useFocusableProps({ ...props, native: true }, elem)
+  const fauxDimVar = useVar<Dimensions | undefined>(undefined)
+  const fauxDim = useValue(fauxDimVar)
+
+  if (focus) useFocus(elem, focus)
+
   const value = useValue(props.value)
   const variantC = useVariantClass(props)
+  const palette = usePalette()
+
+  useEffect(() => {
+    if (autoselect && elem) {
+      setTimeout(() => elem.select())
+    }
+  }, [autoselect, elem])
+
+  useEffect(() => {
+    if (autofocus && elem) {
+      setTimeout(() => elem.focus())
+    }
+  }, [autofocus, elem])
 
   useEffect(() => {
     if (selection) {
       return selection.effect(s => {
-        if (elem) elem.setSelectionRange(s.start, s.end)
+        elem?.setSelectionRange(s.start, s.end)
       })
     }
   }, [selection])
 
-  const cardC = multiline ? multilineC : singlelineC
+  const inputRef = (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+    if (el) setElem(el)
+  }
 
   const onChange = () => {
     if (!elem) return
     props.value.set(elem.value)
+    if (onGeom) requestAnimationFrame(onGeom)
   }
+
+  useEffect(() => {
+    if (fauxElem) {
+      const measure = () => {
+        fauxDimVar.set(measureAbsolute(fauxElem).dimensions)
+        isFirst.current = false
+      }
+      if (isFirst.current) {
+        requestAnimationFrame(measure)
+      } else measure()
+    }
+  })
 
   const snapshotSelectionAsync = () => {
     requestAnimationFrame(snapshotSelection)
@@ -101,48 +149,64 @@ export function Input(props: Props) {
     }
   }
 
-  const shared = {
-    ref: (el: HTMLInputElement & HTMLTextAreaElement) => {
-      if (ref) ref(el)
-      setElem(el ?? undefined)
-    },
+  const multiFaux = (
+    <Box
+      elem={setFauxElem}
+      dontConvertTextToLabels
+      className={cx(inputC, variantC, fauxC)} //
+    >
+      {highlight || value}
+      {'\uFEFF'}
+    </Box>
+  )
+
+  const singleFaux = (
+    <Box
+      elem={setFauxElem}
+      dontConvertTextToLabels
+      style={{ width: 'fit-content' }}
+      className={cx(inputC, variantC, singleFauxC)}
+    >
+      {highlight || value || placeholder}
+    </Box>
+  )
+
+  const inputProps = {
+    ref: inputRef,
     spellCheck: false,
     placeholder: placeholder,
-    className: cx(inputC, variantC, cardC),
+    className: cx(inputC, variantC, placeholderC.get(palette.Fg.alpha(0.2))),
     value: value,
     onChange,
     onKeyDown: snapshotSelectionAsync,
     onKeyUp: snapshotSelection,
     onMouseDown: snapshotSelectionAsync,
     onMouseMove: snapshotSelection,
-    onMouseUp: snapshotSelection,
-    onFocus,
-    onBlur
+    onMouseUp: snapshotSelection
   }
-
-  const faux = (
-    <Box
-      dontConvertTextToLabels
-      measureSize={setDim}
-      className={cx(inputC, variantC, fauxC)}
-    >
-      {Primary || value}
-      {'\uFEFF'}
-    </Box>
+  let input: ReactNode = (
+    <>
+      <input
+        {...inputProps}
+        style={{ flexGrow: 1, width: fauxDim && px(Math.ceil(fauxDim.width)) }}
+      />
+      {flexible && singleFaux}
+    </>
   )
-
-  let input: ReactNode = <input {...shared} />
 
   if (multiline)
     input = (
       <>
-        <textarea {...shared} style={{ height: dim && px(dim.height) }} />
-        {faux}
+        <textarea
+          {...inputProps}
+          style={{ flexGrow: 1, height: fauxDim && px(fauxDim.height) }}
+        />
+        {multiFaux}
       </>
     )
 
   return (
-    <Box {...rest} className={cx(className, containerC, !!Primary && primaryC)}>
+    <Box fg {...rest} h className={cx(className, containerC, !!highlight && primaryC)}>
       {input}
     </Box>
   )
@@ -150,20 +214,15 @@ export function Input(props: Props) {
 
 // ----------------------------------------------------------------------------
 
-const inputC = className('input')
-const fauxC = className('faux')
-const primaryC = className('Primary')
-const multilineC = className('multiline')
-const singlelineC = className('singleline')
-
-const containerC = className('input-container', {
+const containerC = style({
   position: 'relative',
+  flexShrink: 0,
   flexGrow: 1
-})
+}).name('container')
 
-inputC.style({
+const inputC = style({
   display: 'block',
-  width: '100%',
+  // width: '100%',
   boxSizing: 'border-box',
   resize: 'none',
   margin: '0',
@@ -175,37 +234,55 @@ inputC.style({
   color: 'inherit',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word'
-})
-
-inputC.self('::placeholder').style({
-  color: '#c0c9cc' // TODO
-})
-
-fauxC.style({
-  position: 'absolute',
-  top: 0,
-  pointerEvents: 'none',
-  visibility: 'hidden'
-})
-
-primaryC.deep(fauxC).style({
-  visibility: 'visible'
-})
-
-// PrimaryC.sub(multilineC.or(singlelineC)).style({
-//   ...({ '-webkit-text-fill-color': White.alpha(0.2).toString() } as any)
-// })
+}).name('input')
 
 containerC
-  .not(Rule.firstChild)
+  .not(FirstChild)
   .child(inputC)
   .style({
     paddingLeft: px(0)
   })
 
 containerC
-  .not(Rule.lastChild)
+  .not(LastChild)
   .child(inputC)
   .style({
     paddingRight: px(0)
   })
+
+// Because we might start measuring on startup, we need to make sure this style
+// is already available. Input faux measuring might result in an infinite loop
+// when these rules are not installed on time.
+
+inputC.self('::placeholder').style({})
+
+const placeholderC = memo1((color: Rgba) => {
+  const phC = style().name('placeholder')
+  phC.self('::placeholder').style({
+    color: color.toString()
+  })
+  return phC
+})
+
+const fauxC = style({
+  position: 'absolute',
+  top: 0,
+  pointerEvents: 'none',
+  visibility: 'hidden'
+}).name('faux')
+
+const singleFauxC = style({
+  position: 'absolute',
+  top: 0,
+  whiteSpace: 'pre',
+  width: 'fit-content',
+  height: px(Unit),
+  pointerEvents: 'none',
+  visibility: 'hidden'
+  // background: 'red'
+})
+
+const primaryC = style()
+primaryC.deep(fauxC).style({
+  visibility: 'visible'
+})

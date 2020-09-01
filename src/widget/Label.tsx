@@ -1,9 +1,10 @@
 import React, { Fragment, ReactNode } from 'react'
 import { Box, BoxProps } from '../box/Box'
-import { FlexStyles } from '../box/Flexed'
+import { horizontalC } from '../box/Flexed'
 import { useVariantClass, VariantProps } from '../box/Variant'
 import { eqOn, groupBy } from '../lib/Grouping'
-import { className, cx, pct, px, rule } from '../styling'
+import { cx, px, pct } from '../styling/Classy'
+import { style, rule } from '../styling/Rule'
 import { ShortcutString } from './ShortcutString'
 
 type Justify = 'left' | 'center' | 'right'
@@ -15,9 +16,7 @@ export interface LabelProps {
   children?: ReactNode
 }
 
-type Props = LabelProps & VariantProps & BoxProps
-
-export function Label(props: Props) {
+export function Label(props: BoxProps) {
   const { ellipsis, children, justify, smallcaps, mono, subtle, ...rest } = props
 
   const variantC = useVariantClass(props)
@@ -32,10 +31,14 @@ export function Label(props: Props) {
   )
 
   return (
-    <Box dontConvertTextToLabels type="p" shrink {...rest} className={className}>
+    <Box dontConvertTextToLabels fg type="p" shrink {...rest} className={className}>
       {children}
     </Box>
   )
+}
+
+export function Inline(props: BoxProps) {
+  return <Box dontConvertTextToLabels type="span" {...props} />
 }
 
 // ----------------------------------------------------------------------------
@@ -45,7 +48,7 @@ export function childrenToLabel(
   props: LabelProps & VariantProps
 ): ReactNode {
   const elems = ['a', 'b', 'i', 'u']
-  const types = [ShortcutString]
+  const types = [ShortcutString, Inline]
 
   function isTextual(node: ReactNode) {
     if (typeof node === 'number' || typeof node === 'string') return true
@@ -70,7 +73,7 @@ export function childrenToLabel(
     return groups.flatMap((group, j) => {
       const nodes = group
         .map(({ node }) => node)
-        .map((node, i) => <Fragment key={i}>{node}</Fragment>)
+        .map((node, i) => <Fragment key={i}>{node}</Fragment>) // wrong!
 
       if (group[0].isTexual) {
         return [
@@ -88,13 +91,11 @@ export function childrenToLabel(
 
 // ----------------------------------------------------------------------------
 
-export const labelC = className('label', {
+const labelC = style({
   margin: '0',
   boxSizing: 'border-box',
   overflow: 'auto'
 })
-
-const { horizontalC } = FlexStyles
 
 horizontalC
   .child(labelC)
@@ -114,13 +115,13 @@ labelC.deep(rule('h1').or(rule('h2'))).style({
   fontWeight: 500
 })
 
-const centerC = className('center', { textAlign: 'center' })
-const rightC = className('center', { textAlign: 'right' })
+const centerC = style({ textAlign: 'center' }).name('left')
+const rightC = style({ textAlign: 'right' }).name('right')
 
-const ellipsisC = className('ellipsis', {
+const ellipsisC = style({
   display: 'block',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   width: pct(100)
-})
+}).name('ellipsis')

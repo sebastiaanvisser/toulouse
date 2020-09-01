@@ -1,44 +1,51 @@
 import * as React from 'react'
-import { Box, BoxProps, CornerStyles, Smaller, SmallerUnit, Unit } from '../box'
-import { className, cx, leftRadius, px, rightRadius } from '../styling'
+import { BoxProps, Box } from '../box/Box'
+import { roundC, roundedC } from '../box/Corner'
+import { Small } from '../box/Small'
+import { SmallUnit, Unit, Smaller } from '../box/Unit'
+import { cx, px, leftRadius, rightRadius } from '../styling/Classy'
+import { style } from '../styling/Rule'
 
 export function Tag(props: BoxProps) {
   const { className, ...rest } = props
   return (
-    <Box
-      small
-      shrink
-      clip
-      bg
-      blunt
-      h
-      align="start"
-      className={cx(className, tagC)}
-      {...rest}
-    />
+    <Small>
+      <Box
+        shrink
+        clip
+        bg
+        blunt
+        h
+        align="start"
+        className={cx(className, tagC)}
+        {...rest}
+      />
+    </Small>
   )
 }
 
 export function Tags(props: BoxProps) {
   const { className, ...rest } = props
-  return <Box small pad bg spaced h className={cx(className, tagsC)} {...rest} />
+  return (
+    <Small>
+      <Box pad bg spaced h className={cx(className, tagsC)} {...rest} />
+    </Small>
+  )
 }
 
 // ----------------------------------------------------------------------------
 
-const tagC = className('tag')
+const tagC = style({
+  minWidth: px(SmallUnit),
+  minHeight: px(SmallUnit)
+}).name('Tag')
 
-tagC.style({
-  minWidth: px(SmallerUnit),
-  minHeight: px(SmallerUnit)
-})
-
-const tagsC = className('tags', {
+const tagsC = style({
   flexWrap: 'wrap',
   paddingBottom: 0,
   minWidth: px(Unit),
   minHeight: px(Unit)
-})
+}).name('tags')
 
 tagsC.children.style({
   margin: 0,
@@ -46,8 +53,6 @@ tagsC.children.style({
   maxWidth: `calc(100% - ${px(Smaller)})`,
   wordBreak: 'break-all'
 })
-
-const { roundedC, roundC } = CornerStyles
 
 tagsC.self(roundC).children.firstChild.style(leftRadius(px(11)))
 tagsC.self(roundC).children.lastChild.style(rightRadius(px(11)))

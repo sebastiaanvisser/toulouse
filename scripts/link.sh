@@ -21,12 +21,14 @@ pushd $toulouse_node_modules
 popd
 
 pushd $toulouse_dir
-  cp package.json dist
-  pushd dist/
-    ln -s ../node_modules
-    yarn unlink 
-    yarn link
-  popd
+  # cp package.json dist
+  # pushd dist/
+  #   ln -s ../node_modules
+  #   yarn unlink 
+  #   yarn link
+  # popd
+  yarn unlink 
+  yarn link
 popd
 
 rm node_modules/toulouse

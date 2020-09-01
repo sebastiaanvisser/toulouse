@@ -1,68 +1,42 @@
-import { FocusEvent, RefCallback, useState, useEffect } from 'react'
-import { Value, Var, useControlledVar } from '../lib/Var'
-import { className, cx } from '../styling'
-import { BoxProps } from '../box/Box'
+import { cloneElement, ReactElement, useEffect, useState } from 'react'
+import { useEvent } from '../lib/Hooks'
+import { Var } from '../lib/Var'
 
-export interface FocusProps {
-  focus?: Var<boolean> | Value<boolean>
-  native?: boolean
-}
+export function useFocus(elem: HTMLElement | undefined, focus: Var<boolean>) {
+  useEvent(elem, 'focus', () => focus.set(true))
+  useEvent(elem, 'blur', () => focus.set(false))
 
-interface FocusableAspects {
-  onFocus: (ev: FocusEvent<HTMLElement>) => void
-  onBlur: (ev: FocusEvent<HTMLElement>) => void
-  className: string
-  ref: RefCallback<HTMLElement>
-  tabIndex?: number
+  useEffect(
+    () =>
+      focus.batch().effect(f => {
+        if (f) elem?.focus()
+        else elem?.blur()
+      }),
+    [elem]
+  )
 }
 
 // ----------------------------------------------------------------------------
 
-export function useFocusableProps(
-  props: FocusProps & BoxProps,
-  provided?: HTMLElement
-): Partial<FocusableAspects> {
-  const { focus, native, tabIndex } = props
-
-  if (!focus) return {}
-
-  const [element, setElement] = useState<HTMLElement | undefined>()
-  const [hasFocus, setFocus] = useControlledVar(focus, false)
-  const managed = tabIndex !== undefined || native
-
-  useEffect(() => {
-    return props.focus?.effect(hasFocus => {
-      if (managed && hasFocus) {
-        ;(provided ?? element)?.focus()
-      }
-    })
-  }, [focus, native, element])
-
-  const onFocus = (ev: FocusEvent<HTMLElement>) => {
-    if (!managed) return
-    if (props.onFocus) props.onFocus(ev as any)
-    setFocus(true)
-  }
-
-  const onBlur = (ev: FocusEvent<HTMLElement>) => {
-    if (!managed) return
-    if (props.onBlur) props.onBlur(ev as any)
-    setFocus(false)
-  }
-
-  const className = cx(props.className, hasFocus && focusC)
-
-  const ref: RefCallback<HTMLElement> = (el: HTMLElement) => {
-    if (!provided) setElement(el || undefined)
-  }
-
-  return {
-    onFocus,
-    onBlur,
-    className,
-    tabIndex,
-    ref
-  }
+interface Props {
+  focus: Var<boolean>
+  elem?: (el: HTMLElement) => void
+  children: ReactElement
 }
 
-export const focusC = className('focus')
+export function Focusable(props: Props) {
+  const { children, focus, elem: fwElem } = props
+  const { elem: bwElem } = children.props
+
+  const [elem, setElem] = useState<HTMLElement>()
+
+  useFocus(elem, focus)
+
+  const onElem = (el: HTMLElement) => {
+    if (el) setElem(el)
+    if (fwElem) fwElem(el)
+    if (bwElem) bwElem(el)
+  }
+
+  return cloneElement(children, { elem: onElem })
+}

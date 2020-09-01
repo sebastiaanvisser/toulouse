@@ -45,7 +45,7 @@ export const memo1 = <A, B>(
 
 export const memo2 = <A, B, C>(
   fun: (a: A, b: B) => C,
-  on?: (a: A, b: B) => string //
+  on?: (a: A, b: B) => any //
 ) =>
   memo1<[A, B], C>(
     t => fun(t[0], t[1]),
@@ -54,7 +54,7 @@ export const memo2 = <A, B, C>(
 
 export const memo3 = <A, B, C, D>(
   fun: (a: A, b: B, c: C) => D,
-  on?: (a: A, b: B, c: C) => string
+  on?: (a: A, b: B, c: C) => any
 ) =>
   memo1<[A, B, C], D>(
     t => fun(t[0], t[1], t[2]),
@@ -63,7 +63,7 @@ export const memo3 = <A, B, C, D>(
 
 export const memo4 = <A, B, C, D, E>(
   fun: (a: A, b: B, c: C, d: D) => E,
-  on?: (a: A, b: B, c: C, d: D) => string
+  on?: (a: A, b: B, c: C, d: D) => any
 ) =>
   memo1<[A, B, C, D], E>(
     t => fun(t[0], t[1], t[2], t[3]),

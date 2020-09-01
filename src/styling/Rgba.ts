@@ -39,6 +39,14 @@ export class Rgba {
     return this.mix(Rgba.Black, c)
   }
 
+  add(v: number) {
+    return rgba(this.r + v, this.g + v, this.b + v, this.a)
+  }
+
+  get avg() {
+    return (this.r + this.g + this.b) / 3
+  }
+
   static fromHex(hex: string): Rgba {
     if (!hex.match(/^#?([a-fA-F0-9]{3,4}){1,2}$/))
       throw new AssertionError({ message: 'Rgba.fromHex: invalid hex string' })
@@ -70,4 +78,19 @@ export class Rgba {
 export const rgba = (r: number, g: number, b: number, a: number = 1) =>
   new Rgba(r, g, b, a)
 
-// ----------------------------------------------------------------------------
+export const DefaultColors = {
+  Black: Rgba.Black,
+  White: Rgba.White,
+  Yellow: rgba(255, 193, 7),
+  Orange: rgba(255, 145, 0),
+  Red: rgba(208, 70, 0),
+  Rose: rgba(249, 99, 192),
+  Magenta: rgba(233, 32, 99),
+  Purple: rgba(95, 71, 144),
+  Indigo: rgba(17, 95, 125),
+  Blue: rgba(55, 166, 216),
+  Cyan: rgba(0, 214, 196),
+  Aqua: rgba(0, 122, 112),
+  Green: rgba(76, 174, 79),
+  Lime: rgba(205, 220, 57)
+}

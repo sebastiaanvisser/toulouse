@@ -1,21 +1,26 @@
-import { createContext, useContext } from 'react'
-import { className, cx } from '../styling'
+import React, { createContext, PropsWithChildren, useContext } from 'react'
+import { cx } from '../styling/Classy'
+import { className } from '../styling/Rule'
+
+export const SmallContext = createContext(false)
+
+export function Small(props: PropsWithChildren<SmallProps>) {
+  const { small, children } = props
+  return (
+    <SmallContext.Provider value={small === undefined ? true : small}>
+      {children}
+    </SmallContext.Provider>
+  )
+}
+
+export const useSmall = () => useContext(SmallContext)
+
+// ----------------------------------------------------------------------------
 
 export interface SmallProps {
   small?: boolean
 }
 
-export const SmallContext = createContext(false)
-
-export const useSmall = () => useContext(SmallContext)
-
-export const useResolvedeSmall = (props: SmallProps) => {
-  const small = useContext(SmallContext)
-  return props.small || small
-}
-
 export const smallC = className(`small`)
 
-export const useSmallClass = (props: SmallProps) => {
-  return cx(props.small && smallC)
-}
+export const useSmallClass = ({ small }: SmallProps) => cx(small && smallC)

@@ -1,29 +1,28 @@
-import * as React from 'react'
-import { useState } from 'react'
-import { SmallerUnit, Unit } from '../box'
+import React, { ReactElement, ReactNode, useState } from 'react'
 import { Box, BoxProps } from '../box/Box'
-import { useAttachment } from '../box/Measure'
-import { useResolvedeSmall } from '../box/Small'
+import { useSmall } from '../box/Small'
+import { SmallUnit, Unit } from '../box/Unit'
+import { Attach, useAttachment } from '../dyn/Attach'
 import * as Con from '../dyn/Constraint'
 import { DragState, useDrag } from '../dyn/Drag'
-import { FocusProps, useFocusableProps } from '../dyn/Focus'
-import { pt } from '../lib/Geometry'
-import { Range, range } from '../lib/Range'
-import { useControlledVar, useValue, Var } from '../lib/Var'
-import { Hover, PrimaryColor } from '../styling'
-import { className, cx } from '../styling'
+import { Focusable } from '../dyn/Focus'
+import { Geom, Point } from '../lib/Geometry'
+import { Range_, range } from '../lib/Range'
+import { useValue, useVar, Var } from '../lib/Var'
+import { Fg, Hovering, Primary } from '../styling/Color'
 import { Panel } from './Panel'
 
-export interface SliderProps extends FocusProps {
+export interface SliderProps {
   value: Var<number>
   small?: boolean
-  limit: Range
+  limit: Range_
   step?: number | number[]
   stick?: number | number[]
   snap?: number | number[]
   tick?: number | number[]
   dots?: number | number[]
-  attachHandle?: () => React.ReactNode
+  focus?: Var<boolean>
+  wrapThumb?: (handle: ReactElement) => ReactNode
   onStartDragging?: () => void
   onStopDragging?: () => void
 }
@@ -78,19 +77,24 @@ const onKeyDown = (props: SliderProps) => (ev: React.KeyboardEvent) => {
 export const Slider = React.memo((props: SliderProps & BoxProps) => {
   const { className, ...rest } = props
 
-  const focusableProps = useFocusableProps(props)
-  const small = useResolvedeSmall(props)
+  const focus = props.focus ?? useVar<boolean>(false)
+  const small = useSmall()
 
   return (
-    <Box
-      rel
-      {...focusableProps}
-      className={cx(className, sliderC)}
-      attach={() => <Slider_ {...props} small={small} />}
-      onKeyDown={onKeyDown(props)}
-      height={small ? SmallerUnit : Unit}
-      {...rest}
-    />
+    <Focusable focus={focus}>
+      <Attach
+        inside
+        attachment={() => <Slider_ {...props} focus={focus} small={small} />}
+      >
+        <Box
+          rel
+          noselect
+          onKeyDown={onKeyDown(props)}
+          height={small ? SmallUnit : Unit}
+          {...rest}
+        />
+      </Attach>
+    </Focusable>
   )
 })
 
@@ -98,6 +102,7 @@ export const Slider = React.memo((props: SliderProps & BoxProps) => {
 
 interface Context {
   small?: boolean
+  focus: Var<boolean>
 }
 
 export function Slider_(props: SliderProps & Context) {
@@ -106,7 +111,7 @@ export function Slider_(props: SliderProps & Context) {
     dots,
     tick,
     small,
-    attachHandle,
+    wrapThumb: wrapHandle = h => h,
     step,
     stick,
     snap,
@@ -114,15 +119,16 @@ export function Slider_(props: SliderProps & Context) {
     onStopDragging
   } = props
 
-  const [focus] = useControlledVar(props.focus, false)
-  const attachProps = useAttachment()
-  const { target, abs } = attachProps
+  const { target, geom } = useAttachment()
+  const hasFocus = useValue(props.focus)
 
   const [thumb, setThumb] = useState<HTMLElement>()
   const v = useValue(props.value)
 
-  const height = () => (small === true ? SmallerUnit : Unit)
+  const height = () => (small === true ? SmallUnit : Unit)
   const pad = () => (small === true ? 12 : 15)
+
+  const shade = Fg.alpha(0.05)
 
   const renderTrack = (value: number) => {
     const r = trackRange()
@@ -139,7 +145,7 @@ export function Slider_(props: SliderProps & Context) {
           top={height() / 2 - t / 2}
           width={r.delta() + w * 2}
           height={t}
-          bg={Hover}
+          bg={shade}
         />
         <Box
           blunt
@@ -148,7 +154,7 @@ export function Slider_(props: SliderProps & Context) {
           top={height() / 2 - t / 2}
           width={x === r.from ? 0 : (x === r.to ? w * 2 : w) + x - r.from}
           height={t}
-          bg={PrimaryColor}
+          bg={Primary}
         />
       </>
     )
@@ -167,7 +173,7 @@ export function Slider_(props: SliderProps & Context) {
         top={height() / 2 + (small === true ? 3 : 5)}
         width={w}
         height={5}
-        bg={Hover.darken(0.05)}
+        bg={Hovering.darken(0.05)}
       />
     ))
   }
@@ -187,28 +193,23 @@ export function Slider_(props: SliderProps & Context) {
         top={height() / 2 - d / 2}
         width={d}
         height={d}
-        bg={x <= v ? PrimaryColor : Hover.darken(0.05)}
+        bg={x <= v ? Primary : Hovering.darken(0.05)}
       />
     ))
   }
 
   const renderThumb = (value: number) => {
     const left = Math.round(limit.remap(trackRange(), value) - Thumb / 2)
-    return (
-      limit.within(value) && (
-        <Panel
-          abs
-          round
-          outline
-          glow={focus}
-          elem={setThumb}
-          attach={attachHandle}
-          left={left}
-          top={height() / 2 - Thumb / 2}
-          width={Thumb}
-          height={Thumb}
-        />
-      )
+    return wrapHandle(
+      <Panel
+        abs
+        round
+        style={{ visibility: limit.within(value) ? undefined : 'hidden' }}
+        outline
+        glow={hasFocus}
+        elem={setThumb}
+        geom={new Geom(left, height() / 2 - Thumb / 2, Thumb, Thumb)}
+      />
     )
   }
 
@@ -222,7 +223,7 @@ export function Slider_(props: SliderProps & Context) {
 
   // ------------------------------------------------------------------------
 
-  const trackRange = () => range(pad(), abs.width - pad())
+  const trackRange = () => range(pad(), geom.width - pad())
 
   const round = (x: number): number => {
     if (typeof step === 'number') return Math.round(x / step) * step
@@ -246,15 +247,15 @@ export function Slider_(props: SliderProps & Context) {
 
   const constraint = () => {
     if (stick) {
-      const pts = xpos(stick).map(x => pt(Math.round(x), height() / 2))
+      const pts = xpos(stick).map(x => new Point(Math.round(x), height() / 2))
       return Con.solver(Con.oneOf(...pts.map(Con.fixed)))
     }
 
     const tr = trackRange()
-    const line = Con.hline(pt(tr.from, height() / 2), tr.delta())
+    const line = Con.hline(new Point(tr.from, height() / 2), tr.delta())
 
     if (snap) {
-      const pts = xpos(snap).map(x => pt(x, height() / 2))
+      const pts = xpos(snap).map(x => new Point(x, height() / 2))
       return Con.compose(...pts.map(p => Con.snap(p, 10)), line)
     }
 
@@ -285,7 +286,3 @@ export function Slider_(props: SliderProps & Context) {
     </>
   )
 }
-
-// ----------------------------------------------------------------------------
-
-const sliderC = className('slider', { userSelect: 'none' })

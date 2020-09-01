@@ -1,55 +1,71 @@
 import React, { Fragment, ReactNode } from 'react'
 import { Box, BoxProps } from '../box/Box'
-import { usePalette, useResolvedPalette } from '../box/Paletted'
+import { bluntC, roundC, roundedC, sharpC } from '../box/Corner'
+import { Theme, usePalette } from '../box/Themed'
 import { Unit } from '../box/Unit'
 import { kappa } from '../icon/Icons'
-import { poly, shapeAsDataUri } from '../icon/Shape'
-import { bz, pt } from '../lib/Geometry'
-import { memo1, memo2 } from '../lib/Memo'
+import { Shape, shapeAsDataUri } from '../icon/Shape'
+import { BezierPoint, Point } from '../lib/Geometry'
+import { memo1, memo2, memo3 } from '../lib/Memo'
 import { useValue, Var } from '../lib/Var'
-import { Bg, className, cx, Palette, px, Rule } from '../styling'
+import { cx, px } from '../styling/Classy'
+import { Palette } from '../styling/Palette'
+import { className, style } from '../styling/Rule'
+import { ClassSelector, Hover_ } from '../styling/Selector'
 
-interface TabDef<A> {
+export interface TabDef<A> {
   tab: A
   label: ReactNode
   props?: BoxProps
 }
 
-type Def<A> = TabDef<A> | { content: ReactNode } | undefined | null | false
+export type Def<A> = TabDef<A> | { content: ReactNode } | undefined | null | false
 
 interface TabsProps<A> extends BoxProps {
-  active: Var<A>
+  active: Var<A | undefined>
   tabs: Def<A>[]
+  tabProps?: BoxProps
 }
 
-function Tab<A extends string | number>(props: {
-  def: TabDef<A>
-  bg: Palette
-  fg: Palette
-  isActive: boolean
-  boxProps: BoxProps
-  setActive: () => void
-  corner: Rule
-}) {
-  const { def, bg, fg, isActive, boxProps, setActive, corner } = props
+function Tab<A extends string | number>(
+  props: {
+    def: TabDef<A>
+    bgPalette: Palette
+    fgPalette: Palette
+    isActive: boolean
+    setActive: () => void
+    corner: ClassSelector
+  } & BoxProps
+) {
+  const { def, bgPalette, fgPalette, isActive, setActive, corner, ...rest } = props
+
   return (
-    <Box
-      rel
-      key={def.tab}
-      palette={isActive ? fg : undefined}
-      className={cx(tabC, tabSepC.get(bg), cornerC.get(fg), isActive && activeC, corner)}
-    >
+    <Theme palette={isActive ? fgPalette : undefined}>
       <Box
-        button={!isActive}
-        bg={isActive ? Bg : undefined}
-        onMouseDown={setActive}
-        onMouseOver={ev => (ev.altKey ? setActive() : undefined)}
-        {...boxProps}
-        {...def.props}
+        rel
+        key={def.tab}
+        className={cx(
+          tabC,
+          tabSepC.get(bgPalette),
+          isActive && tabCornerC.get([fgPalette, true, true]),
+          isActive && activeC,
+          corner
+        )}
       >
-        {def.label}
+        <Box
+          clip
+          button={!isActive}
+          bg={isActive ? true : undefined}
+          onMouseDown={setActive}
+          onMouseOver={ev => (ev.altKey ? setActive() : undefined)}
+          {...rest}
+          {...def.props}
+          blunt
+        >
+          {def.label}
+        </Box>
       </Box>
-    </Box>
+    </Theme>
   )
 }
 
@@ -62,34 +78,27 @@ function cornerClass<A>(props: TabsProps<A>) {
 }
 
 export function Tabs<A extends string | number>(props: TabsProps<A>) {
-  const { active, tabs, children, ...rest } = props
+  const { active, tabs, children, tabProps, ...rest } = props
 
-  const bg = usePalette()
+  const bgPalette = usePalette()
+  const fgPalette = usePalette()
   const isActive = useValue(active)
-  const fg = useResolvedPalette(props)
   const corner = cornerClass(props)
 
-  const definition = (
-    def: Def<A>,
-    i: number,
-    ac: A,
-    bg: Palette,
-    fg: Palette,
-    panelProps: BoxProps
-  ) => {
+  const definition = (def: Def<A>, i: number) => {
     if (!def) return
 
     if ('tab' in def)
       return (
         <Tab
           def={def}
-          fg={fg}
-          bg={bg}
+          bgPalette={bgPalette}
+          fgPalette={fgPalette}
           key={def.tab}
-          isActive={def.tab === ac}
+          isActive={def.tab === isActive}
           setActive={() => props.active.set(def.tab)}
-          boxProps={panelProps}
           corner={corner}
+          {...tabProps}
         />
       )
 
@@ -99,18 +108,22 @@ export function Tabs<A extends string | number>(props: TabsProps<A>) {
   }
 
   return (
-    <Box h className={cx(tabsC)} {...rest}>
-      {tabs.map((def, i) => definition(def, i, isActive, bg, fg, rest))}
+    <Box h z className={cx(tabsC)} {...rest}>
+      {tabs.map((def, i) => definition(def, i))}
     </Box>
   )
 }
 
 const circleCut = memo2((n: number, s: number) =>
-  poly(
-    pt(0, 0),
-    pt(n, 0),
-    bz(pt(n * kappa, 0), pt(0, n * kappa), pt(0, n)),
-    pt(0, n) //
+  Shape.poly(
+    new Point(0, 0),
+    new Point(n, 0),
+    new BezierPoint(
+      new Point(n * kappa, 0),
+      new Point(0, n * kappa),
+      new Point(0, n) //
+    ),
+    new Point(0, n) //
   )
     .d(-n / 2, -n / 2)
     .scale2(s, -1)
@@ -119,17 +132,11 @@ const circleCut = memo2((n: number, s: number) =>
 
 // ----------------------------------------------------------------------------
 
-const tabsC = className('tabs', { zIndex: 1 })
-const tabC = className('tab')
-const activeC = className('active')
-const sharpC = className('sharp')
-const bluntC = className('blunt')
-const roundedC = className('rounded')
-const roundC = className('round')
-
-tabsC.style({
+const tabsC = style({
   alignItems: 'flex-end'
-})
+}).name('tabs')
+
+const tabC = style().name('tab')
 
 tabC.children.style({
   borderBottomLeftRadius: '0 !important',
@@ -140,57 +147,65 @@ tabC.children.style({
 //   margin: 0
 // })
 
-activeC.style({ zIndex: 2 })
+const activeC = className('active-tab').style({ zIndex: 2 })
 
 tabC.firstChild.style({ marginLeft: px(Unit) })
 tabC.lastChild.style({ marginRight: px(Unit) })
 
-activeC.before.or(activeC.after).style({
-  content: '""',
-  position: 'absolute',
-  bottom: 0
-})
-
-const corners = [
+const tabCorners = [
+  { c: sharpC, n: 0 },
   { c: bluntC, n: 3 },
   { c: roundedC, n: 8 },
   { c: roundC, n: 15 }
-  //
 ]
 
-const cornerC = memo1(
-  (t: Palette) => {
-    const d = className(`tab-corner-${t.name}`)
-    corners.forEach(({ c, n }) => {
-      const tab = d.self(activeC).self(c)
+const tabCornerC = memo3(
+  (t: Palette, left: boolean, right: boolean) => {
+    const d = style()
 
-      tab.before.style({
-        left: px(-n),
-        backgroundImage: shapeAsDataUri(n, n, circleCut.get([n, -1]).fill(t.Bg)),
-        width: px(n),
-        height: px(n)
-      })
+    d.style({
+      borderBottomLeftRadius: '0 !important',
+      borderBottomRightRadius: '0 !important' //
+    })
 
-      tab.after.style({
-        right: px(-n),
-        backgroundImage: shapeAsDataUri(n, n, circleCut.get([n, 1]).fill(t.Bg)),
-        width: px(n),
-        height: px(n)
-      })
+    tabCorners.forEach(({ c, n }) => {
+      const tab = d.self(c)
+
+      if (left)
+        tab.before.style({
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: px(-n),
+          backgroundImage: shapeAsDataUri(n, n, circleCut.get([n, -1]).fill(t.Bg)),
+          width: px(n),
+          height: px(n)
+        })
+
+      if (right)
+        tab.after.style({
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          right: px(-n),
+          backgroundImage: shapeAsDataUri(n, n, circleCut.get([n, 1]).fill(t.Bg)),
+          width: px(n),
+          height: px(n)
+        })
     })
     return d
   },
-  t => t.name
+  (p, b, c) => [p.name, b, c]
 )
 
 const tabSepC = memo1(
   (palette: Palette) => {
-    const c = className(`tab-sep-${palette.name}`)
+    const c = style()
     c.not(activeC)
-      .not(Rule.hover)
+      .not(Hover_)
       .sibling(tabC)
       .not(activeC)
-      .not(Rule.hover)
+      .not(Hover_)
       .before.style({
         content: '""',
         position: 'absolute',
@@ -198,7 +213,7 @@ const tabSepC = memo1(
         bottom: px(6),
         left: px(-1),
         width: px(2),
-        background: palette.Hover.darken(0.2).toString() // separatorGradient('left', palette.Hover)
+        background: palette.Hovering.toString() // separatorGradient('left', palette.Hovering)
       })
     return c
   },

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useGlobalKey, Alt, Key } from '../dyn/GlobalKey'
 import { Highlight } from '../dyn/Highlight'
-import { useValue } from '../lib'
+import { useValue } from '../lib/Var'
 
 interface ShortcutStringProps {
   char: string

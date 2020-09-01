@@ -1,7 +1,8 @@
-import { className, cx, px } from '../styling'
+import { px, cx } from '../styling/Classy'
+import { className } from '../styling/Rule'
 import { smallC } from './Small'
 
-export interface CornerProps {
+export interface Props {
   blunt?: boolean
   rounded?: boolean
   round?: boolean
@@ -10,19 +11,17 @@ export interface CornerProps {
 
 const cr = (r: number) => ({ borderRadius: px(r) })
 
-const sharpC = className('sharp', cr(0))
-const bluntC = className('blunt', cr(3))
-const roundedC = className('rounded', cr(8))
-const roundC = className('round', cr(15))
+export const sharpC = className('sharp').style(cr(0))
+export const bluntC = className('blunt').style(cr(3))
+export const roundedC = className('rounded').style(cr(8))
+export const roundC = className('round').style(cr(15))
 
 smallC.selfOrSub(sharpC).style(cr(0))
-smallC.selfOrSub(bluntC).style(cr(3))
-smallC.selfOrSub(roundedC).style(cr(5))
-smallC.selfOrSub(roundC).style(cr(8))
+smallC.selfOrSub(bluntC).style(cr(2))
+smallC.selfOrSub(roundedC).style(cr(6))
+smallC.selfOrSub(roundC).style(cr(10))
 
-export const CornerStyles = { sharpC, bluntC, roundedC, roundC }
-
-export function cornerClass({ rounded, round, sharp, blunt }: CornerProps) {
+export function classes({ rounded, round, sharp, blunt }: Props) {
   return cx(
     blunt && bluntC,
     rounded && roundedC,

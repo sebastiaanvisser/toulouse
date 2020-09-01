@@ -1,20 +1,18 @@
 import { Iso } from '../lib/Iso'
-import { Rgba, rgba } from './Rgba'
+import { DefaultColors, Rgba, rgba } from './Rgba'
 
 export interface Palette {
-  name: string
+  name: PaletteName
 
+  // Palette specific colors
   Bg: Rgba
   Fg: Rgba
-  Hover: Rgba
+  Shade: Rgba
+  Hovering: Rgba
 
-  Shade: () => Palette
-  Primary: () => Palette
-  Contrast: () => Palette
-
+  // Named colors, tweaked for palette
   Black: Rgba
   White: Rgba
-
   Yellow: Rgba
   Orange: Rgba
   Red: Rgba
@@ -27,31 +25,11 @@ export interface Palette {
   Aqua: Rgba
   Green: Rgba
   Lime: Rgba
+
+  // Associated palettes
+  Primary: () => Palette
+  Contrast: () => Palette
 }
-
-const DefaultColors = {
-  Black: Rgba.Black,
-  White: Rgba.White,
-  Yellow: rgba(255, 193, 7),
-  Orange: rgba(255, 145, 0),
-  Red: rgba(208, 70, 0),
-  Rose: rgba(249, 99, 192),
-  Magenta: rgba(233, 32, 99),
-  Purple: rgba(95, 71, 144),
-  Indigo: rgba(17, 95, 125),
-  Blue: rgba(55, 166, 216), //   rgba(0, 161, 214),
-  Cyan: rgba(0, 214, 196),
-  Aqua: rgba(0, 122, 112),
-  Green: rgba(76, 174, 79),
-  Lime: rgba(205, 220, 57)
-}
-
-export const LightGray = rgba(241, 243, 244)
-export const DarkBlue = rgba(7, 50, 64)
-
-export const Shade = (p: Palette) => p.Shade()
-export const Contrast = (p: Palette) => p.Contrast()
-export const Primary = (p: Palette) => p.Primary()
 
 // ----------------------------------------------------------------------------
 
@@ -60,10 +38,10 @@ export const Arctic: Palette = {
   ...DefaultColors,
 
   Bg: Rgba.White,
-  Fg: Rgba.Black.alpha(0.8),
-  Hover: LightGray,
+  Fg: Rgba.Black.alpha(0.7),
+  Hovering: rgba(241, 243, 244),
+  Shade: Rgba.fromHex('#F6F8FA'),
 
-  Shade: () => Fog,
   Primary: () => Day,
   Contrast: () => Ocean
 }
@@ -72,24 +50,24 @@ export const Fog: Palette = {
   name: 'fog',
   ...DefaultColors,
 
-  Bg: LightGray,
+  Bg: rgba(241, 243, 244),
   Fg: Rgba.Black.alpha(0.8),
-  Hover: LightGray.darken(0.05),
+  Hovering: Rgba.Black.alpha(0.05),
+  Shade: Rgba.fromHex('#F6F8FA'),
 
-  Shade: () => Arctic,
   Primary: () => Night,
-  Contrast: () => Ocean
+  Contrast: () => Night
 }
 
 export const Day: Palette = {
-  name: 'sky',
+  name: 'day',
   ...DefaultColors,
 
   Bg: DefaultColors.Blue,
   Fg: Rgba.White.alpha(0.9),
-  Hover: DefaultColors.Blue.darken(0.1),
+  Hovering: DefaultColors.Blue.darken(0.1),
+  Shade: DefaultColors.Blue.darken(0.1),
 
-  Shade: () => Night,
   Primary: () => Arctic,
   Contrast: () => Ocean
 }
@@ -98,24 +76,47 @@ export const Night: Palette = {
   name: 'night',
   ...DefaultColors,
 
-  Bg: DefaultColors.Indigo,
-  Fg: Rgba.White.alpha(0.8),
-  Hover: DefaultColors.Indigo.lighten(0.1),
+  Bg: rgba(20, 77, 99, 1), //DefaultColors.Indigo,
+  Fg: Rgba.White.alpha(0.7),
+  Hovering: rgba(20, 77, 99, 1).mix(Rgba.White, 0.07),
+  Shade: rgba(20, 77, 99, 1).darken(0.1),
 
-  Shade: () => Ocean,
-  Primary: () => Arctic,
-  Contrast: () => Ocean
+  Red: rgba(226, 108, 62),
+  Green: Rgba.fromHex('#8BC34A'),
+  Blue: rgba(56, 192, 210),
+
+  Primary: () => Desert,
+  Contrast: () => Fog
 }
 
 export const Ocean: Palette = {
   name: 'ocean',
   ...DefaultColors,
 
-  Bg: DarkBlue,
-  Fg: Rgba.White.alpha(0.8),
-  Hover: rgba(22, 71, 86),
+  Bg: rgba(7, 50, 64),
+  Fg: Rgba.White.alpha(0.7),
+  Hovering: rgba(22, 71, 86).darken(0.1),
+  Shade: rgba(7, 50, 64).darken(0.1),
 
-  Shade: () => Night,
+  Red: rgba(242, 109, 57),
+  Green: Rgba.fromHex('#8BC34A'),
+  Blue: Rgba.fromHex('#00bcd4'),
+
+  Primary: () => Desert,
+  Contrast: () => Arctic
+}
+
+export const Cavern: Palette = {
+  name: 'cavern',
+  ...DefaultColors,
+
+  Bg: rgba(5, 35, 45),
+  Fg: Rgba.White.alpha(0.7),
+  Hovering: rgba(5, 35, 45).lighten(0.05),
+  Shade: rgba(5, 35, 45).darken(0.2),
+
+  Blue: Rgba.fromHex('#00bcd4'),
+
   Primary: () => Desert,
   Contrast: () => Arctic
 }
@@ -126,9 +127,9 @@ export const Desert: Palette = {
 
   Bg: DefaultColors.Yellow,
   Fg: rgba(7, 50, 64),
-  Hover: DefaultColors.Yellow.darken(0.07),
+  Hovering: DefaultColors.Yellow.darken(0.07),
+  Shade: DefaultColors.Yellow.lighten(0.1),
 
-  Shade: () => Desert,
   Primary: () => Night,
   Contrast: () => Ocean
 }
@@ -139,24 +140,43 @@ export const Lava: Palette = {
 
   Bg: DefaultColors.Red,
   Fg: Rgba.White.alpha(0.9),
-  Hover: DefaultColors.Red.darken(0.07),
+  Hovering: DefaultColors.Red.darken(0.07),
+  Shade: Rgba.fromHex('#F6F8FA'),
 
-  Shade: () => Lava,
   Primary: () => Arctic,
   Contrast: () => Ocean
 }
 
-export const Palettes = [
-  Arctic,
-  Fog,
-  Day,
-  Night,
-  Ocean,
-  Desert,
-  Lava //
-]
+export const Meadow: Palette = {
+  name: 'meadow',
+  ...DefaultColors,
 
-export const paletteByName = new Iso<Palette, string>(
+  Bg: DefaultColors.Green,
+  Fg: Rgba.White.alpha(0.9),
+  Hovering: DefaultColors.Green.darken(0.1),
+  Shade: Rgba.fromHex('#F6F8FA'),
+
+  Primary: () => Arctic,
+  Contrast: () => Ocean
+}
+
+// ----------------------------------------------------------------------------
+
+export const byName = {
+  arctic: Arctic,
+  fog: Fog,
+  day: Day,
+  night: Night,
+  ocean: Ocean,
+  cavern: Cavern,
+  desert: Desert,
+  meadow: Meadow,
+  lava: Lava
+}
+
+export type PaletteName = keyof typeof byName
+
+export const paletteByName = new Iso<Palette, PaletteName>(
   t => t.name,
-  name => Palettes.filter(t => t.name === name)[0]
+  n => byName[n]
 )

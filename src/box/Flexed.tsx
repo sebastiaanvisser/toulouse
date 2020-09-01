@@ -1,23 +1,25 @@
-import { Sided } from '../lib/Geometry'
-import { memo1 } from '../lib/Memo'
-import { className, cx, px, Rule } from '../styling'
+import { Sides, SidesDef } from '../lib/Geometry'
+import { cx, px } from '../styling/Classy'
+import { className, style } from '../styling/Rule'
+import { LastChild } from '../styling/Selector'
 import { SmallProps, useSmall } from './Small'
 import { Smaller } from './Unit'
 
-export interface FlexProps {
+export interface Props {
   h?: boolean
   v?: boolean
   spaced?: boolean | number
-  pad?: boolean | Sided
-  margin?: boolean | Sided
+  pad?: boolean | SidesDef
+  margin?: boolean | SidesDef
 
-  grow?: boolean
+  grow?: boolean | number
   shrink?: boolean
 
   center?: boolean
   middle?: boolean
   spread?: boolean
   end?: boolean
+  wrap?: boolean
 
   align?: 'start' | 'center' | 'end' | 'auto'
   scroll?: true
@@ -25,7 +27,7 @@ export interface FlexProps {
 
 // ----------------------------------------------------------------------------
 
-export function flexClass(props: FlexProps & SmallProps) {
+export function classes(props: Props & SmallProps) {
   const {
     h,
     v,
@@ -38,25 +40,10 @@ export function flexClass(props: FlexProps & SmallProps) {
     spaced,
     spread,
     end,
+    wrap,
     align,
     scroll
   } = props
-
-  const {
-    horizontalC,
-    verticalC,
-    centerC,
-    middleC,
-    shrinkC,
-    noshrinkC,
-    growC,
-    spreadC,
-    endC,
-    alignStartC,
-    alignCenterC,
-    alignEndC,
-    scrollC
-  } = FlexStyles
 
   const small = useSmall() || props.small
   const m = small ? 10 - Smaller : 10
@@ -68,12 +55,14 @@ export function flexClass(props: FlexProps & SmallProps) {
     middle && middleC,
     shrink === true && shrinkC,
     shrink === false && noshrinkC,
-    grow && growC,
-    pad ? paddedC.get(pad === true ? m : pad) : undefined,
-    margin ? marginC.get(margin === true ? m : margin) : undefined,
-    spaced ? spacedC.get(spaced === true ? m : spaced) : undefined,
+    typeof grow === 'number' && growC(grow),
+    grow === true && growC(1),
+    pad ? paddedC(pad === true ? m : pad) : undefined,
+    margin ? marginC(margin === true ? m : margin) : undefined,
+    spaced ? spacedC(spaced === true ? m : spaced) : undefined,
     spread && spreadC,
     end && endC,
+    wrap && wrapC,
     align === 'start' && alignStartC,
     align === 'center' && alignCenterC,
     align === 'end' && alignEndC,
@@ -83,34 +72,40 @@ export function flexClass(props: FlexProps & SmallProps) {
 
 // ----------------------------------------------------------------------------
 
-const horizontalC = className('h', {
+export const horizontalC = className('h')
+export const verticalC = className('v')
+
+horizontalC.style({
   display: 'flex',
   flexDirection: 'row'
 })
 
-const verticalC = className('v', {
+verticalC.style({
   display: 'flex',
   flexDirection: 'column'
 })
 
-const centerC = className('center', { justifyContent: 'center' })
-const spreadC = className('spread', { justifyContent: 'space-between' })
-const endC = className('spread', { justifyContent: 'flex-end' })
-const middleC = className('middle', { alignItems: 'center' })
+const centerC = style({ justifyContent: 'center' })
+const spreadC = style({ justifyContent: 'space-between' })
+const endC = style({ justifyContent: 'flex-end' })
+const wrapC = style({ flexWrap: 'wrap' })
+const middleC = style({ alignItems: 'center' })
 
-const growC = className('grow', {
-  flexGrow: 1,
-  flexShrink: 'unset'
-})
+const growC = (flexGrow: number) =>
+  style({
+    flexGrow,
+    flexShrink: 'unset'
+  }).name(`grow${flexGrow}`)
 
-const shrinkC = className('shrink', { flexShrink: 'unset' })
-const noshrinkC = className('noshrink', { flexShrink: 0 })
+const shrinkC = style({ flexShrink: 'unset' }).name('shrink')
+const noshrinkC = style({ flexShrink: 0 }).name('noshrink')
+const alignStartC = style({ alignSelf: 'flex-start' }).name('align-start')
+const alignCenterC = style({ alignSelf: 'center' }).name('align-center')
+const alignEndC = style({ alignSelf: 'flex-end' }).name('align-end')
 
-const alignStartC = className('align-start', { alignSelf: 'flex-start' })
-const alignCenterC = className('align-center', { alignSelf: 'center' })
-const alignEndC = className('align-end', { alignSelf: 'flex-end' })
-
-const scrollC = className('scroll', { overflow: 'auto' })
+const scrollC = style({
+  overflow: 'auto' //
+}).name('scroll')
 
 verticalC.child('hr').style({
   backgroundColor: '#d6dfe2',
@@ -132,58 +127,28 @@ horizontalC.child('hr').style({
   marginRight: px(7)
 })
 
-export const FlexStyles = {
-  horizontalC,
-  verticalC,
-  centerC,
-  middleC,
-  shrinkC,
-  noshrinkC,
-  growC,
-  spreadC,
-  endC,
-  alignStartC,
-  alignCenterC,
-  alignEndC,
-  scrollC
-}
+const paddedC = (pad: SidesDef) =>
+  style({
+    padding: new Sides(pad).render()
+  }).name(`pad`)
 
-const renderSided = (s: Sided) => {
-  if (typeof s === 'number') return px(s)
-  if ('h' in s && 'v' in s) return [s.v, s.h].map(px).join(' ')
-  if ('h' in s) return [0, s.h].map(px).join(' ')
-  if ('v' in s) return [s.v, 0].map(px).join(' ')
-  return [s.top, s.right, s.bottom, s.left].map(px).join(' ')
-}
+const marginC = (margin: SidesDef) =>
+  style({
+    margin: new Sides(margin).render()
+  }).name(`margin`)
 
-const paddedC = memo1((pad: Sided) =>
-  className(`pad`, {
-    padding: renderSided(pad)
-  })
-)
+const spacedC = (space: number) => {
+  const sp = style()
 
-const marginC = memo1((margin: Sided) =>
-  className(`margin`, {
-    margin: renderSided(margin)
-  })
-)
-
-const spacedC = memo1((sp: number) => {
-  const { horizontalC, verticalC } = FlexStyles
-
-  const spacedC = className(`spaced${sp}`)
-
-  spacedC
-    .self(horizontalC)
-    .children.not(Rule.lastChild)
+  sp.self(horizontalC)
+    .children.not(LastChild)
     .not('hr')
-    .style({ marginRight: px(sp) })
+    .style({ marginRight: px(space) })
 
-  spacedC
-    .self(verticalC)
-    .children.not(Rule.lastChild)
+  sp.self(verticalC)
+    .children.not(LastChild)
     .not('hr')
-    .style({ marginBottom: px(sp) })
+    .style({ marginBottom: px(space) })
 
-  return spacedC
-})
+  return sp
+}

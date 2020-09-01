@@ -1,19 +1,22 @@
 import React, { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { Box, BoxProps } from '../box/Box'
-import { useResolvedPalette } from '../box/Paletted'
-import { FocusProps, useFocusableProps } from '../dyn/Focus'
-import { Blob, Circle, gshape, Tick } from '../icon/Icons'
-import { circleShape, layers, Shape, offsetAsIcon } from '../icon/Shape'
-import { Memo, memo1 } from '../lib/Memo'
-import { useValue, Var } from '../lib/Var'
-import { Palette } from '../styling'
-import { className, cx } from '../styling'
+import { usePalette } from '../box/Themed'
+import { Focusable } from '../dyn/Focus'
+import { gshape, Icons } from '../icon/Icons'
+import * as S from '../icon/Shape'
+import { Shape } from '../icon/Shape'
+import * as H from '../lib/Hash'
+import { useControlledVar, useValue, useVar, Var } from '../lib/Var'
+import { cx } from '../styling/Classy'
+import { Palette } from '../styling/Palette'
 import { Rgba } from '../styling/Rgba'
-import { Icon } from './Icon'
+import { style } from '../styling/Rule'
+import { Icon } from '../widget/Icon'
 
-interface CheckboxProps extends BoxProps, FocusProps {
-  checked: Var<boolean>
+interface CheckboxProps extends BoxProps {
+  checked?: Var<boolean>
   disabled?: boolean
+  focus?: Var<boolean>
 }
 
 type RadioProps = CheckboxProps
@@ -25,59 +28,68 @@ interface Options {
   enabled: boolean
 }
 
+function hashOptions(options: Options) {
+  const { palette, isChecked, hasFocus, enabled } = options
+  return H.build(palette.name, isChecked, hasFocus, enabled)
+}
+
 // ----------------------------------------------------------------------------
 
-interface ToggleProps extends BoxProps, FocusProps {
+interface ToggleProps extends BoxProps {
   toggle: (b: boolean) => boolean
-  checked: Var<boolean>
+  checked?: Var<boolean>
   label?: string
-  image: Memo<Options, Shape>
+  focus?: Var<boolean>
+  image: (options: Options) => S.IconDef
 }
 
 export function Toggle(props: ToggleProps) {
-  const { disabled, checked, focus } = props
-  const { children, image, onClick, ref, ...rest } = props
-  const focusableProps = useFocusableProps(props)
+  const { disabled } = props
+  const { children, image, onClick, ...rest } = props
 
-  const palette = useResolvedPalette(props)
-  const isChecked = useValue(checked)
-  const hasFocus = focus ? useValue(focus) : false
+  const focus = props.focus ?? useVar<boolean>(false)
+  const hasFocus = useValue(focus)
+
+  const [isChecked, setChecked] = useControlledVar(props.checked, false)
+
+  const palette = usePalette()
 
   const handleClick = (ev: MouseEvent<HTMLDivElement>) => {
     const { onClick, toggle } = props
-    checked.modify(toggle)
+    setChecked(toggle(isChecked))
     if (onClick) onClick(ev)
   }
 
   const handleKeyDown = (ev: KeyboardEvent<HTMLDivElement>) => {
     const { toggle } = props
     if (ev.keyCode === 13 || ev.keyCode === 32) {
-      checked.modify(toggle)
+      setChecked(toggle(isChecked))
     }
   }
 
   const renderDisabled = () => (
     <Box h className={cx(checkboxC)} {...rest}>
-      <Icon icon={image.get({ palette, isChecked, hasFocus, enabled: false })} />
+      <Icon icon={image({ palette, isChecked, hasFocus, enabled: false })} />
       {children}
     </Box>
   )
 
   const renderEnabled = () => (
-    <Box
-      h
-      blunt
-      button
-      rounded
-      className={cx(checkboxC)}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      {...focusableProps}
-      {...rest}
-    >
-      <Icon icon={image.get({ palette, isChecked, hasFocus, enabled: true })} />
-      {children}
-    </Box>
+    <Focusable focus={focus}>
+      <Box
+        h
+        blunt
+        button
+        rounded
+        cx={checkboxC}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        {...rest}
+      >
+        <Icon icon={image({ palette, isChecked, hasFocus, enabled: true })} />
+        {children}
+      </Box>
+    </Focusable>
   )
 
   return disabled ? renderDisabled() : renderEnabled()
@@ -122,55 +134,62 @@ export function RadioOptions<A extends string>(props: RadioOptionsProps<A>) {
 
 // ----------------------------------------------------------------------------
 
-const checkboxImage = memo1(
-  (options: Options) => {
-    const { palette, isChecked, hasFocus, enabled } = options
+const checkboxImage = (options: Options) =>
+  new S.IconDef(`checkbox-${hashOptions(options)}`, () => checkboxImage_(options))
 
-    const bg = palette.Bg
-    const prim = palette.Primary().Bg
-    const sep = palette.Hover
+const checkboxImage_ = (options: Options) => {
+  const { palette, isChecked, hasFocus, enabled } = options
 
-    const f = () =>
-      offsetAsIcon(
-        gshape(8, 8, 6.5, 6.5).scale(1.1).width(2).stroke(prim.alpha(0.4)).fill(bg)
-      )
+  const bg = palette.Bg
+  const prim = palette.Primary().Bg
+  const sep = palette.Hovering
 
-    const on = (c: Rgba) => layers(Blob.get().fill(c), Tick.get().fill(bg))
-    const off = () => offsetAsIcon(gshape(8, 8, 6.5, 6.5).fill(bg).width(1.5).stroke(sep))
+  const f = () =>
+    gshape(8, 8, 6.5, 6.5)
+      .scale(1.1)
+      .width(2)
+      .stroke(prim.alpha(0.4))
+      .fill(bg)
+      .offsetAsIcon()
 
-    if (enabled) {
-      if (isChecked) return layers(hasFocus ? f() : <></>, on(prim))
-      else return hasFocus ? f() : off()
-    } else return isChecked ? on(sep) : off()
-  },
-  o => `${o.palette.name}-${o.isChecked}-${o.enabled}-${o.hasFocus}`
-)
+  const on = (c: Rgba) =>
+    Shape.layers(Icons.Blob.shape().fill(c), Icons.Tick.shape().fill(bg))
+  const off = () => gshape(8, 8, 6.5, 6.5).fill(bg).width(1.5).stroke(sep).offsetAsIcon()
 
-const radioImage = memo1(
-  (options: Options) => {
-    const { palette, isChecked, hasFocus, enabled } = options
+  if (enabled) {
+    if (isChecked) return Shape.layers(hasFocus ? f() : Shape.layers(), on(prim))
+    else return hasFocus ? f() : off()
+  } else return isChecked ? on(sep) : off()
+}
 
-    const bg = palette.Bg
-    const prim = palette.Primary().Bg
-    const sep = palette.Hover
+const radioImage = (options: Options) =>
+  new S.IconDef(`radio-${hashOptions(options)}`, () => radioImage_(options))
 
-    const f = () =>
-      offsetAsIcon(circleShape(8).scale(1.1).width(2).stroke(prim.alpha(0.4)).fill(bg))
+const radioImage_ = (options: Options) => {
+  const { palette, isChecked, hasFocus, enabled } = options
 
-    const on = (c: Rgba) =>
-      layers(Circle.get().fill(c), Circle.get().scaleOn(0.3, 15, 15).fill(bg))
+  const bg = palette.Bg
+  const prim = palette.Primary().Bg
+  const sep = palette.Hovering
 
-    const off = () => offsetAsIcon(circleShape(8).fill(bg).width(1.5).stroke(sep))
+  const f = () =>
+    Shape.circle(8).scale(1.1).width(2).stroke(prim.alpha(0.4)).fill(bg).offsetAsIcon()
 
-    if (enabled) {
-      if (isChecked) return layers(hasFocus ? f() : <></>, on(prim))
-      else return hasFocus ? f() : off()
-    } else return isChecked ? on(sep) : off()
-  },
-  o => `${o.palette.name}-${o.isChecked}-${o.enabled}-${o.hasFocus}`
-)
+  const on = (c: Rgba) =>
+    Shape.layers(
+      Icons.Circle.shape().fill(c),
+      Icons.Circle.shape().scaleOn(0.3, 15, 15).fill(bg)
+    )
+
+  const off = () => Shape.circle(8).fill(bg).width(1.5).stroke(sep).offsetAsIcon()
+
+  if (enabled) {
+    if (isChecked) return Shape.layers(hasFocus ? f() : Shape.layers(), on(prim))
+    else return hasFocus ? f() : off()
+  } else return isChecked ? on(sep) : off()
+}
 
 // ----------------------------------------------------------------------------
 
-const checkboxC = className('checkbox')
+const checkboxC = style()
 checkboxC.focus.style({ outline: 'none' })

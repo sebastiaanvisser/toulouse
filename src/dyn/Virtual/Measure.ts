@@ -1,4 +1,4 @@
-import { Dimensions, Geom, geom, dimensions } from '../../lib/Geometry'
+import { Dimensions, Geom } from '../../lib/Geometry'
 import { range } from '../../lib/Range'
 
 export interface Measurements {
@@ -9,8 +9,8 @@ export interface Measurements {
 }
 
 export const emptyMeasurements: Measurements = {
-  span: dimensions(0, 0),
-  mode: dimensions(0, 0),
+  span: new Dimensions(0, 0),
+  mode: new Dimensions(0, 0),
   cols: [],
   rows: []
 }
@@ -21,7 +21,7 @@ export function computeRegion(m: Measurements, vp: Geom): Geom {
   const { left, width } = regionLeftWidth(m, vp)
   const { top, height } = regionTopHeight(m, vp)
 
-  return geom(left, top, width, height)
+  return new Geom(left, top, width, height)
 }
 
 export const cellWidth = (m: Measurements, x: number) => m.cols[x] || m.mode.width
@@ -55,7 +55,7 @@ export function setCellWidth(m: Measurements, i: number, s: number): Measurement
   cols[i] = ci === undefined ? s : Math.max(ci, s)
   return {
     ...m,
-    mode: dimensions(mode(sample(cols, 100)), m.mode.height)
+    mode: new Dimensions(mode(sample(cols, 100)), m.mode.height)
   }
 }
 
@@ -65,12 +65,12 @@ export function setCellHeight(m: Measurements, i: number, s: number): Measuremen
   rows[i] = ri === undefined ? s : Math.max(ri, s)
   return {
     ...m,
-    mode: dimensions(m.mode.width, mode(sample(rows, 100)))
+    mode: new Dimensions(m.mode.width, mode(sample(rows, 100)))
   }
 }
 
 export const viewbox = (m: Measurements, region: Geom): Geom =>
-  geom(
+  new Geom(
     range(0, region.left)
       .iterate()
       .reduce((a, c) => a + cellWidth(m, c), 0),

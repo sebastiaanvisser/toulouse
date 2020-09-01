@@ -1,11 +1,7 @@
-import * as React from 'react'
+import { CSSProperties } from 'react'
 import { Geom } from '../lib/Geometry'
-import { memo1 } from '../lib/Memo'
-import { className, cx, px } from '../styling'
-
-const resolve = (v: number | string | undefined): string | undefined => {
-  return typeof v === 'number' ? px(v) : v
-}
+import { px, cx } from '../styling/Classy'
+import { style } from '../styling/Rule'
 
 export interface ElementGeom {
   left?: number | string
@@ -17,82 +13,66 @@ export interface ElementGeom {
 }
 
 export const geomStyling = (geom: ElementGeom): React.CSSProperties => ({
-  left: resolve(geom.left),
-  top: resolve(geom.top),
-  width: resolve(geom.width),
-  height: resolve(geom.height),
-  right: resolve(geom.right),
-  bottom: resolve(geom.bottom)
+  left: numeric(geom.left),
+  top: numeric(geom.top),
+  width: numeric(geom.width),
+  height: numeric(geom.height),
+  right: numeric(geom.right),
+  bottom: numeric(geom.bottom)
 })
 
 // ----------------------------------------------------------------------------
 
-export interface SizedProps extends ElementGeom {
+export interface Props extends ElementGeom {
   geom?: Geom
   fit?: boolean | number
   abs?: boolean
   rel?: boolean
-  zoom?: number
-  z?: boolean | number
   clip?: boolean
+  z?: boolean | number
 }
 
 // ----------------------------------------------------------------------------
 
-export function sizedStyle(props: SizedProps): React.CSSProperties {
-  const { left, top, width, height, right, bottom, geom, zoom } = props
+const numeric = (v: number | string | undefined): string | undefined =>
+  typeof v === 'number' ? px(v) : v
 
-  let g: ElementGeom = geom?.toJson() ?? {}
-
-  if (left !== undefined) g = { ...g, left }
-  if (top !== undefined) g = { ...g, top }
-  if (width !== undefined) g = { ...g, width }
-  if (height !== undefined) g = { ...g, height }
-  if (bottom !== undefined) g = { ...g, bottom }
-  if (right !== undefined) g = { ...g, right }
-
+export function styling(props: Props): CSSProperties {
+  const { left, top, width, height, right, bottom, geom } = props
   return {
-    left: resolve(g.left),
-    top: resolve(g.top),
-    width: resolve(g.width),
-    height: resolve(g.height),
-    right: resolve(g.right),
-    bottom: resolve(g.bottom),
-    zoom
+    left: numeric(left ?? geom?.left),
+    top: numeric(top ?? geom?.top),
+    right: numeric(right ?? geom?.right),
+    bottom: numeric(bottom ?? geom?.bottom),
+    width: numeric(width ?? geom?.width),
+    height: numeric(height ?? geom?.height)
   }
 }
 
-export function sizedClass({ abs, rel, fit, z, clip }: SizedProps) {
+export function classes(props: Props) {
+  const { abs, rel, fit, z, clip } = props
   return cx(
     abs && absC,
     rel && relC,
     clip && clipC,
-    z !== undefined && z !== false && zIndexC.get(z === true ? 1 : z),
-    typeof fit === 'number' ? fitC.get(fit) : fit === true ? fitC.get(0) : undefined
+    z !== undefined && z !== false && zIndexC(z === true ? 1 : z),
+    typeof fit === 'number' ? fitC(fit) : fit === true ? fitC(0) : undefined
   )
 }
 
 // ----------------------------------------------------------------------------
 
-const clipC = className(`clip`, {
-  overflow: 'hidden'
-})
+const clipC = style({ overflow: 'hidden' })
+const zIndexC = (zIndex: number) => style({ zIndex })
 
-const zIndexC = memo1((z: number) =>
-  className(`z${z}`, {
-    zIndex: z
-  })
-)
-
-const fitC = memo1((m: number) =>
-  className(`fit${m}`, {
+const fitC = (m: number) =>
+  style({
     position: 'absolute',
     left: px(m),
     top: px(m),
     right: px(m),
     bottom: px(m)
   })
-)
 
-const absC = className('abs', { position: 'absolute' })
-const relC = className('rel', { position: 'relative' })
+const absC = style({ position: 'absolute' }).name('abs')
+const relC = style({ position: 'relative' }).name('rel')

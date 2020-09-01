@@ -1,50 +1,47 @@
 import { CSSProperties } from 'react'
-import { Collectable, CssRegister, collect } from './Css'
-import { printProperties } from './Selector'
+import * as H from '../lib/Hash'
+import { collectKeyframes } from './Css'
+import { Properties } from './Rule'
 
 export type Frames = { [pct: number]: CSSProperties }
 
-export class Keyframes implements Collectable {
-  id: number | undefined
+export class Keyframes {
+  _used = false
 
   constructor(
     readonly prefix: string,
-    readonly frames: Frames //
+    readonly frames: Frames, //
+    readonly hash = H.build('Keyframe', prefix, H.json(frames))
   ) {}
 
   print(): string | undefined {
-    if (this.id === undefined) return
-
     const perFrame = Object.entries(this.frames).map(
-      ([percentage, props]) => `${percentage}% ${printProperties(props)}`
+      ([percentage, props]) => `${percentage}% ${new Properties(props).print()}`
     )
 
-    return `@keyframes ${this.prefix}-${this.id} {\n${perFrame.join('\n')}\n}`
+    return `@keyframes ${this.name()} {\n${perFrame.join('\n')}\n}`
   }
 
-  get used() {
-    return this.id !== undefined
+  name(): string {
+    return `${this.prefix}-${this.hash}`
   }
 
-  get scoped() {
-    return true
+  use() {
+    this._used = true
   }
 
-  use(): string {
-    if (this.id == undefined) {
-      this.id = CssRegister.log.counter
-      CssRegister.log.counter++
-    }
-    return `${this.prefix}-${this.id}`
+  used() {
+    return this._used
   }
 
   toString() {
-    return this.use()
+    this.use()
+    return this.name()
   }
 }
 
 export function keyframes(frames: Frames, prefix = 'kf'): Keyframes {
   const keyframes = new Keyframes(prefix, frames)
-  collect(keyframes)
+  collectKeyframes(keyframes)
   return keyframes
 }

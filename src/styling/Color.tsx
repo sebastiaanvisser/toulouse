@@ -1,15 +1,11 @@
 import { Palette } from './Palette'
-import { Rgba, rgba } from './Rgba'
+import { Rgba } from './Rgba'
 
 export class Color {
-  constructor(readonly f: (color: Rgba, palette: Palette) => Rgba) {}
+  constructor(readonly f: (palette: Palette) => Rgba) {}
 
-  private map(f: (color: Rgba, palette: Palette) => Rgba) {
-    return new Color((c, p) => f(this.f(c, p), p))
-  }
-
-  compose(c: Color) {
-    return this.map(c.f)
+  map(f: (r: Rgba) => Rgba) {
+    return new Color(p => f(this.f(p)))
   }
 
   darken(n = 0.1) {
@@ -20,58 +16,50 @@ export class Color {
     return this.map(c => c.lighten(n))
   }
 
-  alpha(n: number) {
-    return this.map(c => c.alpha(n))
+  alpha(a: number | ((a: number) => number)) {
+    return this.map(c => c.alpha(a))
   }
 
-  mix(other: Color, t = 0.5) {
-    return Color.mix(this, other, t)
+  get(palette: Palette): Rgba {
+    return this.f(palette)
   }
 
-  get(palette: Palette, base = Rgba.Transparent): Rgba {
-    return this.f(base, palette)
+  rgba(palette: Palette): string {
+    return this.get(palette).toString()
   }
 
-  rgba(palette: Palette, base = Rgba.Transparent): string {
-    return this.get(palette, base).toString()
+  mix(b: Color, t = 0.5) {
+    return new Color(p => this.f(p).mix(b.f(p), t))
   }
 
-  static mix(a: Color, b: Color, t = 0.5) {
-    return new Color((c, p) => a.f(c, p).mix(b.f(c, p), t))
+  brighten(n = 0.1) {
+    return this.map(c => (c.avg < 128 ? c.darken(n) : c.lighten(n)))
   }
-
-  static Id = new Color(c => c)
-  static solid = (c: Rgba) => new Color(() => c)
-  static themed = (f: (t: Palette) => Rgba) => new Color((_, t) => f(t))
-  static rgba = (r: number, g: number, b: number, a = 1) => Color.solid(rgba(r, g, b, a))
-  static hex = (hex: string) => Color.solid(Rgba.fromHex(hex))
 }
 
-// ----------------------------------------------------------------------------
+export const solid = (rgba: Rgba) => new Color(() => rgba)
 
-export const Darken = (n = 0.1) => Color.Id.darken(n)
-export const Lighten = (n = 0.1) => Color.Id.lighten(n)
-export const Alpha = (n: number) => Color.Id.alpha(n)
+export const Primary = new Color(p => p.Primary().Bg)
+export const Contrast = new Color(p => p.Contrast().Bg)
 
-export const ShadeColor = Color.themed(p => p.Shade().Bg)
-export const PrimaryColor = Color.themed(p => p.Primary().Bg)
-export const ContrastColor = Color.themed(p => p.Contrast().Bg)
+export const Bg = new Color(p => p.Bg)
+export const Fg = new Color(p => p.Fg)
+export const Dim = Fg.alpha(0.3)
+export const Hovering = new Color(p => p.Hovering)
+export const Shade = new Color(p => p.Shade)
+export const Bright = new Color(p => (p.Fg.avg < 128 ? p.Black : p.White))
 
-export const Bg = Color.themed(t => t.Bg)
-export const Fg = Color.themed(t => t.Fg)
-export const Hover = Color.themed(t => t.Hover)
-
-export const Black = Color.themed(t => t.Black)
-export const White = Color.themed(t => t.White)
-export const Yellow = Color.themed(t => t.Yellow)
-export const Orange = Color.themed(t => t.Orange)
-export const Red = Color.themed(t => t.Red)
-export const Rose = Color.themed(t => t.Rose)
-export const Magenta = Color.themed(t => t.Magenta)
-export const Purple = Color.themed(t => t.Purple)
-export const Indigo = Color.themed(t => t.Indigo)
-export const Blue = Color.themed(t => t.Blue)
-export const Cyan = Color.themed(t => t.Cyan)
-export const Aqua = Color.themed(t => t.Aqua)
-export const Green = Color.themed(t => t.Green)
-export const Lime = Color.themed(t => t.Lime)
+export const Black = new Color(p => p.Black)
+export const White = new Color(p => p.White)
+export const Yellow = new Color(p => p.Yellow)
+export const Orange = new Color(p => p.Orange)
+export const Red = new Color(p => p.Red)
+export const Rose = new Color(p => p.Rose)
+export const Magenta = new Color(p => p.Magenta)
+export const Purple = new Color(p => p.Purple)
+export const Indigo = new Color(p => p.Indigo)
+export const Blue = new Color(p => p.Blue)
+export const Cyan = new Color(p => p.Cyan)
+export const Aqua = new Color(p => p.Aqua)
+export const Green = new Color(p => p.Green)
+export const Lime = new Color(p => p.Lime)

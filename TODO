@@ -2,6 +2,8 @@
 FIXES
 -------------------------------------------------------------------------------
 
+- Text to label conversion is expensive and breaks keys!
+- Memo on outline etc doesn't work, because of eq. Rethink color functions!
 - Separators aren't nicely centered.
      Using gradient again? meh
      Allow thicker and subtle separators?
@@ -9,7 +11,7 @@ FIXES
 - FIX focus mess in country list.
     plus: the focus TODO in Demo4 of inputs
 - fix the empty selector issue (!)
-- Borders/Separators and Hover should be distinct. See Sky theme
+- Borders/Separators and Hovering should be distinct. See Day theme
 - Listbox/virtual should not re-shallow render items already in view.
 - Dyn-sized virtual list items?
 - Both HOVER and FOCUS should have default behavior: border/bg/outline/glow?
@@ -28,7 +30,7 @@ NICE TO HAVE
 DEPLOY
 -------------------------------------------------------------------------------
 
-- Static css building
+- Static css building!
     Don't use memo but deterministically register style blocks.
 - Overlay element is hardcoded now
 - either parametrize or introduce ourselves

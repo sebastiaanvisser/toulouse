@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { useDocumentEvent, Var } from '../lib'
+import { useDocumentEvent } from '../lib/Hooks'
+import { Var } from '../lib/Var'
 
 export const Key = (c: string) => {
   if (c.match(/\d/)) return 'Digit' + c[0]

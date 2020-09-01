@@ -1,8 +1,7 @@
-import { Point, pt } from '../lib/Geometry'
-import { Range, range } from '../lib/Range'
-import { Rect, rect } from '../lib/Geometry'
 import isEqual from 'lodash.isequal'
-import { sortOn } from '../lib'
+import { Point, Rect } from '../lib/Geometry'
+import { sortOn } from '../lib/Grouping'
+import { range, Range_ } from '../lib/Range'
 
 export interface Direction {
   left?: boolean
@@ -49,31 +48,40 @@ export const free: Constraint = () => undefined
 export const none: Constraint = () => []
 
 export const fixed = (p: Point): Constraint => r => {
-  if (isEqual(r.centroid(), p)) return
-  const hw = r.width() / 2
-  const hh = r.height() / 2
-  return [rect(p.x - hw, p.y - hh, p.x + hw, p.y + hh)]
+  if (isEqual(r.centroid, p)) return
+  const hw = r.width / 2
+  const hh = r.height / 2
+  return [new Rect(p.x - hw, p.y - hh, p.x + hw, p.y + hh)]
 }
 
 export const snap = (p: Point, rad: number): Constraint => (r, d) => {
-  const di = r.centroid().distance(p)
+  const di = r.centroid.distance(p)
   if (di > rad) return
   return fixed(p)(r, d)
 }
 
 export const hline = (p: Point, w: number): Constraint => r => {
-  const m = r.centroid()
+  const m = r.centroid
   if (m.x >= p.x && m.x <= p.x + w && m.y === p.y) return
   const x = range(p.x, p.x + w).clamp(m.x)
-  const hw = r.width() / 2
-  const hh = r.height() / 2
-  return [rect(x - hw, p.y - hh, x + hw, p.y + hh)]
+  const hw = r.width / 2
+  const hh = r.height / 2
+  return [new Rect(x - hw, p.y - hh, x + hw, p.y + hh)]
+}
+
+export const vline = (p: Point, h: number): Constraint => r => {
+  const m = r.centroid
+  if (m.y >= p.y && m.y <= p.y + h && m.x === p.x) return
+  const y = range(p.y, p.y + h).clamp(m.y)
+  const hw = r.width / 2
+  const hh = r.height / 2
+  return [new Rect(p.x - hw, y - hh, p.x + hw, y + hh)]
 }
 
 export const grid = (n: number): Constraint => g =>
   g.left % n !== 0 || g.top % n !== 0 || g.right % n !== 0 || g.bottom % n !== 0
     ? [
-        rect(
+        new Rect(
           Math.round(g.left / n) * n,
           Math.round(g.top / n) * n,
           Math.round(g.right / n) * n,
@@ -82,14 +90,14 @@ export const grid = (n: number): Constraint => g =>
       ]
     : undefined
 
-export const bounded = (w: Range, h: Range): Constraint => (r, d) =>
-  !w.within(r.width()) || !h.within(r.height())
+export const bounded = (w: Range_, h: Range_): Constraint => (r, d) =>
+  !w.within(r.width) || !h.within(r.height)
     ? [
-        rect(
-          d.right ? r.left : r.right - w.clamp(r.width()),
-          d.bottom ? r.top : r.bottom - h.clamp(r.height()),
-          d.left ? r.right : r.left + w.clamp(r.width()),
-          d.top ? r.bottom : r.top + h.clamp(r.height())
+        new Rect(
+          d.right ? r.left : r.right - w.clamp(r.width),
+          d.bottom ? r.top : r.bottom - h.clamp(r.height),
+          d.left ? r.right : r.left + w.clamp(r.width),
+          d.top ? r.bottom : r.top + h.clamp(r.height)
         )
       ]
     : undefined
@@ -99,7 +107,7 @@ export const inside = (b: Rect): Constraint => (r, d) => {
 
   if (anyDirection(d))
     return [
-      rect(
+      new Rect(
         d.left ? Math.max(r.left, b.left) : r.left,
         d.top ? Math.max(r.top, b.top) : r.top,
         d.right ? Math.min(r.right, b.right) : r.right,
@@ -107,13 +115,13 @@ export const inside = (b: Rect): Constraint => (r, d) => {
       )
     ]
 
-  if (r.width() > b.width() || r.height() > b.height()) return []
+  if (r.width > b.width || r.height > b.height) return []
 
   return [
     r.place(
-      pt(
-        range(b.left, b.right - r.width()).clamp(r.left),
-        range(b.top, b.bottom - r.height()).clamp(r.top)
+      new Point(
+        range(b.left, b.right - r.width).clamp(r.left),
+        range(b.top, b.bottom - r.height).clamp(r.top)
       )
     )
   ]
@@ -130,7 +138,7 @@ export const outside = (b: Rect): Constraint => (r, d) => {
       d.bottom !== undefined ? r.setBottom(Math.min(r.bottom, b.top)) : undefined
     ]
 
-    return options.filter((v): v is Rect => !!v).filter(x => x.surface() > 0)
+    return options.filter((v): v is Rect => !!v).filter(x => x.surface > 0)
   }
 
   return r.around(b)
@@ -172,7 +180,7 @@ export const rubber = (c: Constraint, n = 1, dir = allDirections): Constraint =>
     const df = to.diff(g)
     const f = (t: number, q: number) =>
       Math.round(t + Math.sign(q) * Math.pow(Math.abs(q), 1 / (1 + n)))
-    return rect(
+    return new Rect(
       dir.left ? f(to.left, df.left) : to.left,
       dir.top ? f(to.top, df.top) : to.top,
       dir.right ? f(to.right, df.right) : to.right,

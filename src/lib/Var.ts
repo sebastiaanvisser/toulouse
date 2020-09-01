@@ -1,9 +1,9 @@
 import { List } from 'immutable'
 import isEqual from 'lodash.isequal'
 import * as React from 'react'
-import { Fragment, ReactNode, useEffect, useState } from 'react'
 import { Lens } from './Edit'
 import { Iso } from './Iso'
+import { Revive } from './Revive'
 
 // ----------------------------------------------------------------------------
 
@@ -41,28 +41,32 @@ export interface Value<A> {
   effect(cb: Listener<A>, run?: boolean): Uninstaller
   listenDown(cb: Listener<A>): Uninstaller
   map<B>(f: (a: A) => B): Value<B>
+  bind<B>(f: (a: A, o?: A) => Value<B>): Value<B>
   lookup<B>(this: Value<{ [key: string]: B }>, key: string): Value<B | undefined>
   batch(): Value<A>
+  find<B>(this: Value<List<B>>, p: (b: B) => boolean): Value<B | undefined>
   at<B>(this: Value<List<B>>, ix: number): Value<B>
   debounce(t: number): Value<A>
   throttle(t: number): Value<A>
   total<B>(this: Value<B | undefined>): Value<B> | undefined
   or<B>(this: Value<B | undefined>, def: B): Value<B>
+  unpack<T>(this: Value<T>): { [P in keyof T]: Value<T[P]> }
+  unlist<T>(this: Value<List<T>>): List<Value<T>>
 }
 
 // ----------------------------------------------------------------------------
 
 export class Var<A> implements Value<A> {
   busy = 0
-  upstreams: (Listener<A> | undefined)[] = []
-  downstreams: (Listener<A> | undefined)[] = []
+  upstreams: Listener<A>[] = []
+  downstreams: Listener<A>[] = []
   pending: Installer[] = []
   installed: { uninstall: Uninstaller; install: Installer }[] = []
-  effects: (Listener<A> | undefined)[] = []
+  effects: Listener<A>[] = []
 
   constructor(private v: A, private eq = isEqual) {}
 
-  cleanup() {
+  dispose() {
     this.installed.forEach(i => i.uninstall())
   }
 
@@ -79,14 +83,18 @@ export class Var<A> implements Value<A> {
     this.effects.push(cb)
     if (W) W.effects++
     const ix = this.effects.length - 1
-    this.install()
+    this.maybeInstall()
     if (run === true) cb(this.get(), undefined)
     return () => {
       delete this.effects[ix]
       if (W) W.effects--
       Var.trim(this.effects)
-      this.uninstall()
+      this.maybeUninstall()
     }
+  }
+
+  use(): Uninstaller {
+    return this.effect(() => {})
   }
 
   listenUp(cb: Listener<A>): Uninstaller {
@@ -104,24 +112,37 @@ export class Var<A> implements Value<A> {
     this.downstreams.push(cb)
     if (W) W.downstream++
     const ix = this.downstreams.length - 1
-    this.install()
+    this.maybeInstall()
     return () => {
       delete this.downstreams[ix]
       if (W) W.downstream--
       Var.trim(this.downstreams)
-      this.uninstall()
+      this.maybeUninstall()
     }
   }
 
-  listenTo<B>(b: Var<B> | Value<B>, listener: (b: B, o?: B) => void, autorun = false) {
-    this.pending.push(() => {
+  listenTo(subscribe: () => Uninstaller): Uninstaller {
+    this.pending.push(subscribe)
+    const ix = this.pending.length - 1
+    this.maybeInstall()
+    return () => {
+      delete this.pending[ix]
+      Var.trim(this.pending)
+    }
+  }
+
+  listenToVar<B>(
+    b: Var<B> | Value<B>,
+    listener: (b: B, o?: B) => void,
+    autorun = false
+  ): Uninstaller {
+    return this.listenTo(() => {
       if (autorun) listener(b.get(), undefined)
       return b.listenDown(listener)
     })
-    this.install()
   }
 
-  private install() {
+  private maybeInstall() {
     if (this.effects.length === 0 && this.downstreams.length === 0) return
     this.pending.forEach(install => {
       const uninstall = install()
@@ -130,7 +151,7 @@ export class Var<A> implements Value<A> {
     this.pending = []
   }
 
-  private uninstall() {
+  private maybeUninstall() {
     if (this.effects.length > 0 || this.downstreams.length > 0) return
     this.installed.forEach(i => {
       i.uninstall()
@@ -143,8 +164,7 @@ export class Var<A> implements Value<A> {
     const all = append(
       this.upstreams,
       this.downstreams,
-      this.effects
-      //
+      this.effects //
     )
     defined(all).forEach(l => l(v, o))
   }
@@ -166,8 +186,18 @@ export class Var<A> implements Value<A> {
     this.busy--
   }
 
+  setting(v: A) {
+    this.set(v)
+    return this
+  }
+
   modify(f: (a: A) => A) {
     this.set(f(this.get()))
+  }
+
+  modifying(f: (a: A) => A) {
+    this.modify(f)
+    return this
   }
 
   censor(f: (a: A, old: A) => A): Var<A> {
@@ -177,30 +207,40 @@ export class Var<A> implements Value<A> {
     )
   }
 
-  // ------------------------------------------
-
-  val(): Value<A> {
-    return this.map(a => a)
-  }
+  // --------------------------------------------
 
   map<B>(f: (a: A, o?: A) => B): Value<B> {
     const b = new Var(f(this.get()))
-    b.listenTo<A>(this, (v, o) => b.set(f(v, o)))
+    b.listenToVar<A>(this, (v, o) => b.set(f(v, o)))
     b.get = () => f(this.get())
     return b
   }
 
   zoom<B>(f: (a: A) => B, g: (b: B, old: A) => A): Var<B> {
     const b = new Var(f(this.get()))
-    b.listenTo<A>(this, v => b.set(f(v)))
+    b.listenToVar<A>(this, v => b.set(f(v)))
     b.get = () => f(this.get())
     b.listenUp((b: B) => this.modify(a => g(b, a)))
     return b
   }
 
-  edit<T>(f: Lens<A, T>): Var<T> {
+  bind<B>(f: (a: A, o?: A) => Value<B>): Value<B> {
+    let un = () => {}
+    const b = new Var(f(this.get()).get())
+    b.listenToVar<A>(this, (v, o) => {
+      un()
+      const inner = f(v, o)
+      un = b.listenToVar(inner, w => {
+        b.set(w)
+      })
+    })
+    b.get = () => f(this.get()).get()
+    return b
+  }
+
+  lens<T>(f: Lens<A, T>): Var<T> {
     return this.zoom(
-      o => f(o).get(),
+      o => f(o).get,
       (v, o) => f(o).set(v)
     )
   }
@@ -209,7 +249,7 @@ export class Var<A> implements Value<A> {
     return this.zoom(fw, bw)
   }
 
-  // ------------------------------------------
+  // --------------------------------------------
 
   total<B>(this: Var<B | undefined>): Var<B> | undefined {
     const v = this.get()
@@ -246,10 +286,27 @@ export class Var<A> implements Value<A> {
     )
   }
 
-  prop<P extends keyof A>(p: P): Var<A[P]> {
+  cast<B extends A>(f: (a: A) => a is B): this is Var<B> {
+    return f(this.get())
+  }
+
+  prop<B extends Object, P extends keyof B>(this: Var<B>, p: P): Var<B[P]> {
     return this.zoom(
       a => a[p],
-      (b, a) => ({ ...a, [p]: b })
+      (b, a) => {
+        const o = { ...a, [p]: b }
+        return 'copy' in a ? (a as any).copy(o) : o
+      }
+    )
+  }
+
+  by<B>(this: Var<Record<string, B>>, p: string): Var<B | undefined> {
+    return this.zoom(
+      a => a[p] as B | undefined,
+      (b, a) => {
+        const { [p]: _, ...rest } = a
+        return b === undefined ? rest : { ...rest, [p]: b }
+      }
     )
   }
 
@@ -271,6 +328,20 @@ export class Var<A> implements Value<A> {
     return this.zoom<B>(
       xs => xs.get(ix) ?? (fallback as B),
       (x, xs) => xs.set(ix, x)
+    )
+  }
+
+  first<B>(this: Var<List<B>>): Var<B | undefined> {
+    return this.zoom(
+      xs => xs.first(),
+      (x, xs) => (x !== undefined ? xs.shift().unshift(x) : xs)
+    )
+  }
+
+  last<B>(this: Var<List<B>>): Var<B | undefined> {
+    return this.zoom(
+      xs => xs.last(),
+      (x, xs) => (x !== undefined ? xs.pop().push(x) : xs)
     )
   }
 
@@ -325,7 +396,7 @@ export class Var<A> implements Value<A> {
     const t = this.get()
     for (let key in t) {
       out[key] = new Var(t[key])
-      out[key].listenTo(this, v => out[key].set(v[key]))
+      out[key].listenToVar(this, v => out[key].set(v[key]))
       out[key].listenUp(v => this.prop(key).set(v))
     }
 
@@ -336,12 +407,12 @@ export class Var<A> implements Value<A> {
     return this.get().map((_, ix) => this.at(ix))
   }
 
-  localStorage(key: string, rehydrate: (a: A) => A = a => a): Uninstaller {
+  localStorage(key: string, revive: Revive<A>): Uninstaller {
     try {
       const val = window.localStorage.getItem(key)
       if (val !== null) {
         const parsed = JSON.parse(val)
-        this.set(rehydrate(parsed))
+        this.set(revive(parsed))
       }
     } catch (e) {}
     return this.effect(v => window.localStorage.setItem(key, JSON.stringify(v)))
@@ -350,7 +421,7 @@ export class Var<A> implements Value<A> {
   batch(): Value<A> {
     var o = new Var(this.get())
     let x = -1
-    o.listenTo(this, v => {
+    o.listenToVar(this, v => {
       window.cancelAnimationFrame(x)
       x = window.requestAnimationFrame(() => o.set(v))
     })
@@ -360,7 +431,7 @@ export class Var<A> implements Value<A> {
   debounce(t: number = 0): Value<A> {
     var o = new Var(this.get())
     let x = -1
-    o.listenTo(
+    o.listenToVar(
       this,
       v => {
         window.clearTimeout(x)
@@ -392,7 +463,7 @@ export class Var<A> implements Value<A> {
       }, t)
     }
 
-    o.listenTo(this, v => {
+    o.listenToVar(this, v => {
       if (wait) {
         last = v
         pending = true
@@ -415,7 +486,7 @@ export class Var<A> implements Value<A> {
     out.get = snapshot
 
     for (var p in obj) {
-      out.listenTo(obj[p], () => out.set(snapshot()))
+      out.listenToVar(obj[p], () => out.set(snapshot()))
     }
 
     if (bidirectional)
@@ -429,22 +500,26 @@ export class Var<A> implements Value<A> {
     return out
   }
 
-  static list<A>(xs: Var<A>[], bidirectional = false): Var<A[]> {
+  static list<A>(xs: List<Var<A>>, bidirectional = false): Var<List<A>> {
     const snapshot = () => xs.map(o => o.get())
 
     const out = new Var(snapshot())
     out.get = snapshot
 
-    xs.forEach(x => out.listenTo(x, () => out.set(snapshot())))
+    xs.forEach(x => out.listenToVar(x, () => out.set(snapshot())))
 
     if (bidirectional)
       out.listenUp(ts =>
         xs.forEach((x, ix) => {
-          if (x instanceof Var) x.set(ts[ix])
+          if (x instanceof Var) x.set(ts.get(ix) as A)
         })
       )
 
     return out
+  }
+
+  static partial<A>() {
+    return new Var<A | undefined>(undefined)
   }
 
   // ----------------------------------------------------------------------------
@@ -494,26 +569,34 @@ const update = <A>(
 // React hooks
 
 export function useValue<A>(v: Value<A>): A {
-  const [, set] = useState<A>(v.get())
-  useEffect(() => v.effect(set, true), [])
+  const [, set] = React.useState<A>(v.get())
+  React.useEffect(() => v.effect(set, true), [v])
   return v.get()
 }
 
-export function useVar<A>(v: A): Var<A> {
+export function useMaybeValue<A>(v: Value<A> | undefined): A | undefined {
+  const [, set] = React.useState<A | undefined>(v?.get())
+  React.useEffect(() => v?.effect(set, true), [v])
+  return v?.get()
+}
+
+export function useVar<A>(v: A, eq: (a: A, b: A) => boolean = isEqual): Var<A> {
   const ref = React.useRef<Var<A>>()
   if (!ref.current) {
-    ref.current = new Var(v)
+    ref.current = new Var(v, eq)
   }
   return ref.current
 }
 
-export function useStoredVar<A>(
-  key: string,
-  v: A,
-  rehydrate: (a: A) => A = a => a
-): Var<A> {
+export function useVar1<A>(v: A, eq: (a: A, b: A) => boolean = isEqual): [Var<A>, A] {
+  const ref = useVar(v, eq)
+  const snapshot = useValue(ref)
+  return [ref, snapshot]
+}
+
+export function useStoredVar<A>(key: string, v: A, revive: (a: A) => A = a => a): Var<A> {
   const w = useVar(v)
-  useEffect(() => w.localStorage(key, rehydrate), [])
+  React.useEffect(() => w.localStorage(key, revive), [])
   return w
 }
 
@@ -521,9 +604,9 @@ export function useControlledVar<A>(
   v: Var<A> | Value<A> | undefined,
   def: A
 ): [A, (a: A) => void] {
-  const [get, set_] = useState(v ? v.get() : def)
+  const [get, set_] = React.useState(v ? v.get() : def)
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (v) return v.effect(set_, true)
   }, [v])
 
@@ -539,11 +622,11 @@ export function useControlledVar<A>(
 
 export interface UseProps<A> {
   value: Var<A> | Value<A>
-  children?: (a: A) => ReactNode | undefined
+  children?: (a: A) => React.ReactNode | undefined
 }
 
 export function Use<A>(props: UseProps<A>) {
   const { value, children } = props
   const v = useValue(value)
-  return React.createElement(Fragment, { children: children ? children(v) : v })
+  return React.createElement(React.Fragment, { children: children ? children(v) : v })
 }

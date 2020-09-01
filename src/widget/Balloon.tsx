@@ -1,30 +1,36 @@
 import React, {
   CSSProperties,
   MutableRefObject,
+  ReactNode,
+  useCallback,
   useEffect,
   useRef,
   useState
 } from 'react'
 import * as ReactDOM from 'react-dom'
 import { v4 as uuid } from 'uuid'
-import { SmallContext, useResolvedeSmall } from '../box'
 import { Box, BoxProps } from '../box/Box'
+import { Small, useSmall } from '../box/Small'
+import { Theme } from '../box/Themed'
+import { SmallerRatio } from '../box/Unit'
 import {
   isAncestorOrSelf,
   isDetached,
   measureAbsolute,
+  measureDimensions,
   useAttachment
-} from '../box/Measure'
-import * as S from '../icon/Icons'
-import { clipAsIcon, offsetAsIcon, Shape } from '../icon/Shape'
-import { Dimensions, Geom, Position } from '../lib/Geometry'
+} from '../dyn/Attach'
+import * as Icons from '../icon/Icons'
+import * as S from '../icon/Shape'
+import { Dimensions, Geom, Position, Sides, SidesDef } from '../lib/Geometry'
 import { useDebounce, useDocumentEvent, useEvent, useStateDeepEquals } from '../lib/Hooks'
-import { memo1, Once } from '../lib/Memo'
+import { memo2 } from '../lib/Memo'
 import { range } from '../lib/Range'
 import { useControlledVar, Value, Var } from '../lib/Var'
-import { Bg, Day } from '../styling'
-import { className, cx, px, style } from '../styling'
-import { Icon } from './Icon'
+import { cx, px, pct } from '../styling/Classy'
+import { Bg } from '../styling/Color'
+import { style, className } from '../styling/Rule'
+import { Icon } from '../widget/Icon'
 import { Panel } from './Panel'
 
 export type BalloonPosition = 'left' | 'top' | 'right' | 'bottom'
@@ -65,18 +71,19 @@ export const ReallySlow: Timing = {
 }
 
 interface BalloonOnlyProps {
-  behavior?: 'hover' | 'click' | 'mousedown'
+  behavior?: 'hover' | 'click' | 'mousedown' | 'mouseup'
   open?: Var<boolean> | Value<boolean>
   position?: BalloonPosition
   bias?: number
   hover?: boolean
-  handle?: boolean
+  handle?: boolean | ReactNode
   id?: string
-  margin?: number
+  margin?: SidesDef
   timing?: Timing
   registry?: BalloonRegistry | false
   width?: number | 'target' | ((width: number) => number)
   height?: number | 'target' | ((width: number) => number)
+  transitions?: ('opacity' | 'transform')[]
 }
 
 export type BalloonProps = BalloonOnlyProps & Omit<BoxProps, 'width' | 'height'>
@@ -90,15 +97,29 @@ interface Context {
 export function Balloon(props: BalloonProps) {
   const target = useAttachment()?.target
 
-  return (
-    <SmallContext.Provider value={false}>
+  const stop: React.EventHandler<any> = ev => ev.stopPropagation()
+
+  return ReactDOM.createPortal(
+    <div
+      onMouseDown={stop}
+      onMouseUp={stop}
+      onClick={stop}
+      onKeyDown={stop}
+      onKeyPress={stop}
+      onKeyUp={stop}
+    >
       {target ? <Balloon_ {...props} target={target} /> : null}
-    </SmallContext.Provider>
+    </div>,
+    document.getElementById('overlay') as HTMLElement
   )
 }
 
 export const Tooltip = (props: BalloonProps = {}) => (
-  <Balloon small palette={Day} position="top" behavior="hover" {...props} h />
+  <Theme primary>
+    <Small>
+      <Balloon position="top" behavior="hover" h {...props} />
+    </Small>
+  </Theme>
 )
 
 // ----------------------------------------------------------------------------
@@ -127,31 +148,44 @@ export class BalloonRegistry {
     close: () => void
   ) {
     this.stack.push({ id, ref, close })
+    return this.stack.length
   }
 
   unregister(id: string) {
     this.stack = this.stack.filter(entry => entry.id !== id)
   }
 
-  onKeyDown = (ev: KeyboardEvent) => {
-    if (ev.keyCode === 27) {
-      const last = this.stack.pop()
-      if (last) last.close()
+  private onKeyDown = (ev: KeyboardEvent) => {
+    if (this.stack.length > 0 && ev.key === 'Escape') {
+      this.close()
+      ev.preventDefault()
+      ev.stopPropagation()
     }
+  }
+
+  close = () => {
+    this.stack.pop()?.close()
+  }
+
+  closeAll() {
+    let cur
+    do {
+      cur = this.stack.pop()
+      cur?.close()
+    } while (cur)
   }
 }
 
-const GlobalReg = new BalloonRegistry()
+export const Balloons = new BalloonRegistry()
 
 // ----------------------------------------------------------------------------
 
-const rendered = (shape: Once<Shape>, name: string): Once<Shape> =>
-  shape.map(s => offsetAsIcon(clipAsIcon(s)).named(name))
+// const rendered = (shape: Shape, name: string): Once<Shape> =>
+//   shape.map(s => s.clipAsIcon().offsetAsIcon().named(name))
 
-const balloonHandle = rendered(S.handle, 'balloon-handle')
-const balloonHandleSmall = rendered(
-  S.handle.map(s => s.scale(2 / 3)),
-  'balloon-handle-small'
+const balloonHandle = S.IconDef.make('balloon-handle', Icons.handle)
+const balloonHandleSmall = S.IconDef.make('balloon-handle-small', () =>
+  Icons.handle().scale(SmallerRatio)
 )
 
 // ----------------------------------------------------------------------------
@@ -165,26 +199,30 @@ export function Balloon_(props: BalloonProps & Context) {
     geom,
     target,
     open,
-    palette,
+    bias,
     margin,
     width,
     height,
-    registry = GlobalReg,
+    registry = Balloons,
+    transitions = ['opacity', 'transform'],
     ...rest
   } = props
 
+  const [z, setZ] = useState(0)
   const [id] = useState(uuid)
   const [isVisible, setVisible] = useState(false)
   const [size, setSize] = useStateDeepEquals<Dimensions | undefined>(undefined)
   const [isOpen, setOpen] = useControlledVar(open, false)
   const elem = useRef<HTMLElement | undefined>()
-  const small = useResolvedeSmall(props)
+  const small = useSmall()
 
   // ----------------------------------
 
   const { debounceIn, debounceOut, durationOut } = timing
 
-  const targetClick = () => setOpen(!isOpen)
+  const openBalloon = useCallback(() => setOpen(true), [])
+  const closeBalloon = useCallback(() => setOpen(false), [])
+  const toggleBalloon = useCallback(() => setOpen(!isOpen), [])
 
   const [startHover, hoverRef] = useDebounce(() => {
     if (!isOpen) {
@@ -196,8 +234,14 @@ export function Balloon_(props: BalloonProps & Context) {
   const [stopHover] = useDebounce(() => setOpen(false), debounceOut, hoverRef)
 
   const documentMouseDown = (ev: Event) => {
+    // Not yet in open state.
     const evTarget = ev.target as HTMLElement
     if (!isOpen || !elem.current) return
+
+    // Only close when we're the top box.
+    // if (registry instanceof BalloonRegistry) {
+    //   if (registry.top()?.ref !== elem) return
+    // }
 
     // Allow interaction with the top balloon.
     if (registry instanceof BalloonRegistry) {
@@ -219,14 +263,19 @@ export function Balloon_(props: BalloonProps & Context) {
 
   // ----------------------------------
 
-  useEvent(target, 'click', targetClick, behavior === 'click', [behavior, isOpen])
-  useEvent(target, 'mousedown', targetClick, behavior === 'mousedown', [behavior, isOpen])
+  useEvent(target, 'click', toggleBalloon, behavior === 'click', [behavior, isOpen])
+  useEvent(target, 'mousedown', toggleBalloon, behavior === 'mousedown', [
+    behavior,
+    isOpen
+  ])
+  useEvent(target, 'mouseup', openBalloon, behavior === 'mouseup', [behavior, isOpen])
+  useEvent(target, 'mousedown', closeBalloon, behavior === 'mouseup', [behavior, isOpen])
 
   useDocumentEvent(
     'mousedown',
     documentMouseDown,
     [isOpen, target, behavior],
-    isOpen && (behavior === 'click' || behavior === 'mousedown')
+    isOpen && (behavior === 'click' || behavior === 'mousedown' || behavior === 'mouseup')
   )
 
   useEvent(target, 'mouseenter', startHover, behavior === 'hover', [isOpen])
@@ -240,7 +289,9 @@ export function Balloon_(props: BalloonProps & Context) {
     const hiding = !isOpen && isVisible
     if (showing) show()
     if (hiding) hide()
-    if (showing && registry) registry.register(id, elem, () => setOpen(false))
+    if (showing && registry) {
+      setZ(registry.register(id, elem, () => setOpen(false)))
+    }
     if (hiding && registry) registry.unregister(id)
   }, [isOpen, isVisible])
 
@@ -248,11 +299,11 @@ export function Balloon_(props: BalloonProps & Context) {
 
   if (!isOpen && !isVisible) return <></>
 
-  const styles = Styles.get(timing)
-  const { balloonC, balloonPanelC, outC, leftC, rightC, topC, bottomC } = styles
+  const { leftC, rightC, topC, bottomC } = PositionStyles.get([small, bias || 0])
+  const { transitionC, outC } = TransitionStyles.get([timing, transitions])
 
   const className = cx(
-    balloonC,
+    transitionC,
     isOpen && !isVisible && outC,
     !isOpen && isVisible && outC,
     position === 'left' && leftC,
@@ -276,32 +327,33 @@ export function Balloon_(props: BalloonProps & Context) {
       ? height(dim.height)
       : height
 
-  return ReactDOM.createPortal(
+  const onElem = (target: HTMLElement) => {
+    elem.current = target
+    setSize(measureDimensions(target))
+  }
+
+  return (
     <Box
       abs
       fg
-      palette={palette}
       {...pos}
-      elem={el => (elem.current = el)}
-      measureSize={setSize}
+      elem={onElem}
+      z={1000 + z}
       onClick={ev => ev.stopPropagation()}
       style={{ visibility: size ? undefined : 'hidden' }}
       className={className}
       onMouseEnter={hover ? () => setTimeout(startHover) : undefined}
       onMouseLeave={hover ? stopHover : undefined}
     >
-      {props.handle !== false && size && <Handle {...props} dim={size} />}
-      <Panel
-        width={computedWidth}
-        height={computedHeight}
-        elevate
-        {...rest}
-        className={cx(balloonPanelC, props.className)}
-      >
+      {(props.handle === true || props.handle === undefined) && size ? (
+        <Handle {...props} dim={size} />
+      ) : (
+        props.handle
+      )}
+      <Panel width={computedWidth} height={computedHeight} elevate {...rest}>
         {children}
       </Panel>
-    </Box>,
-    document.getElementById('overlay') as HTMLElement
+    </Box>
   )
 }
 
@@ -317,13 +369,13 @@ function computePosition(
   const b = bias || 0
   const pos = position || 'bottom'
   const defaultM = small ? 5 : 10
-  const m = margin === undefined ? defaultM : margin
+  const m = new Sides(margin ?? defaultM).asRect
 
   if (pos === 'left' || pos === 'right') {
     const dy = ((dim.height - size.height) / 2) * b
     const top = Math.round(dim.top + dim.height / 2 - size.height / 2 + dy)
     const left = Math.round(
-      pos === 'left' ? dim.left - size.width - m : dim.left + dim.width + m
+      pos === 'left' ? dim.left - size.width - m.left : dim.left + dim.width + m.right
     )
     return { left, top }
   }
@@ -332,7 +384,7 @@ function computePosition(
     const dx = ((dim.width - size.width) / 2) * b
     const left = Math.round(dim.left + dim.width / 2 - size.width / 2 + dx)
     const top = Math.round(
-      pos === 'top' ? dim.top - size.height - m : dim.top + dim.height + m
+      pos === 'top' ? dim.top - size.height - m.top : dim.top + dim.height + m.bottom
     )
     return { left, top }
   }
@@ -341,12 +393,12 @@ function computePosition(
 }
 
 function Handle(props: BalloonProps & { dim: Dimensions }) {
-  const small = useResolvedeSmall(props)
-  const { position, bias = 0, timing, dim } = props
+  const small = useSmall()
+  const { position, bias = 0, dim } = props
   const { width, height } = dim
-  const { handleC } = Styles.get(timing || DefaultTiming)
+  const { handleC } = PositionStyles.get([small, bias])
 
-  const handle = 30
+  const handle = small ? 20 : 30
 
   const isV = position === 'left' || position === 'right'
   const isH = !isV
@@ -371,55 +423,26 @@ function Handle(props: BalloonProps & { dim: Dimensions }) {
   }
 
   return (
-    <div className={cx(handleC)} style={style}>
+    <Box abs noevents className={cx(handleC)} style={style}>
       <Icon fg={Bg} icon={small ? balloonHandleSmall : balloonHandle} />
-    </div>
+    </Box>
   )
 }
 
 // ----------------------------------------------------------------------------
 
-const Styles = memo1((timing: Timing) => {
-  const { durationIn, durationOut } = timing
-  const trIn = `${durationIn}ms ease-in`
-  const trOut = `${durationOut}ms ease-in`
-
-  const balloonC = className('balloon', {
-    transition: [`opacity ${trIn}`, `transform ${trIn}`].join(),
-    opacity: 1,
-    transform: 'scale(1) translate(0,0)',
-    zIndex: 1000
-  })
-
-  const inC = className('in', {
-    opacity: 0,
-    transition: [`opacity ${trOut}`, `transform ${trOut}`].join(),
-    transform: 'scale(0.8)'
-  })
-
-  const outC = className('out', {
-    opacity: 0,
-    transition: [`opacity ${trOut}`, `transform ${trOut}`].join(),
-    transform: 'scale(0.8)'
-  })
-
-  const balloonPanelC = className()
+const PositionStyles = memo2((small: boolean, bias: number) => {
+  const o = pct((bias + 1) * 50)
+  const leftC = style({ transformOrigin: `100% ${o}` })
+  const rightC = style({ transformOrigin: `0% ${o}` })
+  const topC = style({ transformOrigin: `${o} 100%` })
+  const bottomC = style({ transformOrigin: `${o} 0%` })
 
   // ------------------------------------
 
-  const leftC = style({ transformOrigin: '100% 50%' })
-  const rightC = style({ transformOrigin: '0% 50%' })
-  const topC = style({ transformOrigin: '50% 100%' })
-  const bottomC = style({ transformOrigin: '50% 0%' })
+  const handleC = className('balloon-handle').disamb(bias)
 
-  // ------------------------------------
-
-  const handleC = className('handle', {
-    position: 'absolute',
-    pointerEvents: 'none'
-  })
-
-  const offset = -15
+  const offset = small ? -10 : -15
   leftC.child(handleC).style({ right: px(offset), transform: 'rotate(90deg)' })
   rightC.child(handleC).style({ left: px(offset), transform: 'rotate(270deg)' })
   topC.child(handleC).style({ bottom: px(offset), transform: 'rotate(180deg)' })
@@ -427,13 +450,69 @@ const Styles = memo1((timing: Timing) => {
 
   return {
     handleC,
-    balloonC,
-    balloonPanelC,
-    inC,
-    outC,
     leftC,
     rightC,
     topC,
     bottomC
   }
 })
+
+const TransitionStyles = memo2(
+  (timing: Timing, transitions: ('transform' | 'opacity')[]) => {
+    const { durationIn, durationOut } = timing
+    const trIn = `${durationIn}ms ease-in`
+    const trOut = `${durationOut}ms ease-in`
+
+    const opacity = transitions.indexOf('opacity') !== -1
+    const transform = transitions.indexOf('transform') !== -1
+
+    const transitionC = style({
+      transition: transitions.map(tr => `${tr} ${trIn}`).join(),
+      opacity: opacity ? 1 : undefined,
+      transform: transform ? 'scale(1) translate(0,0)' : undefined
+    }).name('balloon')
+
+    const inC = style({
+      opacity: opacity ? 0 : undefined,
+      transition: transitions.map(tr => `${tr} ${trOut}`).join(),
+      transform: transform ? 'scale(0.8)' : undefined
+    }).name('in')
+
+    const outC = style({
+      opacity: opacity ? 0 : undefined,
+      transition: transitions.map(tr => `${tr} ${trOut}`).join(),
+      transform: transform ? 'scale(0.8)' : undefined
+    }).name('out')
+
+    return {
+      transitionC,
+      inC,
+      outC
+    }
+  }
+)
+
+function preloadCss() {
+  ;[true, false].forEach(small =>
+    [-1, 0, 1].map(bias => {
+      const { handleC, leftC, rightC, topC, bottomC } = PositionStyles.get([small, bias])
+      handleC.use()
+      leftC.use()
+      rightC.use()
+      topC.use()
+      bottomC.use()
+    })
+  )
+  ;[DefaultTiming, ReallySlow].map(timing => {
+    const { transitionC, inC, outC } = TransitionStyles.get([
+      timing,
+      ['opacity', 'transform']
+    ])
+
+    transitionC.use()
+    inC.use()
+    outC.use()
+  })
+}
+
+preloadCss()
