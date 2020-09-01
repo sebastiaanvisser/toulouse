@@ -1,6 +1,6 @@
 import { FocusEvent, RefCallback, useState, useEffect } from 'react'
 import { Value, Var, useControlledVar } from '../lib/Var'
-import { className, cx } from '../styling/Css'
+import { className, cx } from '../styling'
 import { BoxProps } from '../box/Box'
 
 export interface FocusProps {

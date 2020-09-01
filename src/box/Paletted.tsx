@@ -1,7 +1,7 @@
 import { createContext, CSSProperties, useContext } from 'react'
 import { memo1 } from '../lib/Memo'
 import { Color } from '../styling/Color'
-import { className, cx } from '../styling/Css'
+import { className, cx } from '../styling'
 import { Arctic, Palette } from '../styling/Palette'
 import { Rgba } from '../styling/Rgba'
 

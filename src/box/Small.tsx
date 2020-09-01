@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import { className, cx } from '../styling/Css'
+import { className, cx } from '../styling'
 
 export interface SmallProps {
   small?: boolean

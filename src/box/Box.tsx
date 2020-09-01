@@ -14,7 +14,7 @@ import {
   useStateDeepEquals,
   useWindowEvent
 } from '../lib/Hooks'
-import { className, cx, useCssInstalled } from '../styling/Css'
+import { className, cx, useCssInstalled } from '../styling'
 import { childrenToLabel, LabelProps } from '../widget/Label'
 import { SeparatedProps, useSepClass } from '../widget/Sep'
 import { BorderProps, useBorderClass } from './Border'

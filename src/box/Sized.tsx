@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Geom } from '../lib/Geometry'
 import { memo1 } from '../lib/Memo'
-import { className, cx, px } from '../styling/Css'
+import { className, cx, px } from '../styling'
 
 const resolve = (v: number | string | undefined): string | undefined => {
   return typeof v === 'number' ? px(v) : v

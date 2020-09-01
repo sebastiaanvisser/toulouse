@@ -1,6 +1,6 @@
 import { Sided } from '../lib/Geometry'
 import { memo1 } from '../lib/Memo'
-import { className, cx, px, Rule } from '../styling/Css'
+import { className, cx, px, Rule } from '../styling'
 import { SmallProps, useSmall } from './Small'
 import { Smaller } from './Unit'
 

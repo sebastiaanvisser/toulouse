@@ -5,7 +5,7 @@ import { getMargin, measureAbsolute } from '../box/Measure'
 import { useValue } from '../lib'
 import { Geom, geom, Rect } from '../lib/Geometry'
 import { Var } from '../lib/Var'
-import { className, cx, important, px, style } from '../styling/Css'
+import { className, cx, important, px, style } from '../styling'
 import { Constraint, free } from './Constraint'
 import { DragCallbacks, DragState, Stage, useDrag } from './Drag'
 

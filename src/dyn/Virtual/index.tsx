@@ -13,7 +13,7 @@ import {
   sidedAsRect
 } from '../../lib/Geometry'
 import { useDebounce, useStateDeepEquals, useWindowEvent } from '../../lib/Hooks'
-import { className, cx, pct, px } from '../../styling/Css'
+import { className, cx, pct, px } from '../../styling'
 import { Data, Grid, Grouped, RenderContainer } from './Grid'
 import { RenderCell, RenderRow } from './Row'
 

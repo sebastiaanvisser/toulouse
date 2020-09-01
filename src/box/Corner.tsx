@@ -1,4 +1,4 @@
-import { className, cx, px } from '../styling/Css'
+import { className, cx, px } from '../styling'
 import { smallC } from './Small'
 
 export interface CornerProps {

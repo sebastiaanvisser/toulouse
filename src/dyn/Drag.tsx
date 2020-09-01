@@ -4,7 +4,7 @@ import { measureAbsolute, measureRelative } from '../box/Measure'
 import { useEvent, useValue } from '../lib'
 import { Geom, Point, pt, Rect, rect } from '../lib/Geometry'
 import { Var } from '../lib/Var'
-import { className, cx } from '../styling/Css'
+import { className, cx } from '../styling'
 import { anyDirection, Constraint, Direction, free, noDirection, run } from './Constraint'
 
 export type Stage = 'start' | 'update' | 'cancel' | 'finish' | 'idle'

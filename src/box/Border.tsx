@@ -1,6 +1,6 @@
 import { memo1, pt } from '../lib'
 import { Color, Hover, Palette, Rgba } from '../styling'
-import { className, cx, insetShadow, px } from '../styling/Css'
+import { className, cx, insetShadow, px } from '../styling'
 import { PalettedProps, useResolvedPalette } from './Paletted'
 
 export interface BorderProps {

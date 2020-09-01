@@ -7,8 +7,7 @@ import { poly, shapeAsDataUri } from '../icon/Shape'
 import { bz, pt } from '../lib/Geometry'
 import { memo1, memo2 } from '../lib/Memo'
 import { useValue, Var } from '../lib/Var'
-import { Bg, Palette } from '../styling'
-import { className, cx, px, Rule } from '../styling/Css'
+import { Bg, className, cx, Palette, px, Rule } from '../styling'
 
 interface TabDef<A> {
   tab: A

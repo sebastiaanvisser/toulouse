@@ -1,6 +1,5 @@
 import { memo1 } from '../lib/Memo'
-import { Bg, Palette, Hover } from '../styling'
-import { className, cx, Rule } from '../styling/Css'
+import { Bg, className, cx, Hover, Palette, Rule } from '../styling'
 import { PalettedProps, useResolvedPalette } from './Paletted'
 
 export interface ClickableProps {

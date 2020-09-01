@@ -3,7 +3,7 @@ import { Box, BoxProps } from '../box/Box'
 import { FlexStyles } from '../box/Flexed'
 import { useVariantClass, VariantProps } from '../box/Variant'
 import { eqOn, groupBy } from '../lib/Grouping'
-import { className, cx, pct, px, rule } from '../styling/Css'
+import { className, cx, pct, px, rule } from '../styling'
 import { ShortcutString } from './ShortcutString'
 
 type Justify = 'left' | 'center' | 'right'

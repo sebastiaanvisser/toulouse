@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Box, BoxProps, CornerStyles, Smaller, SmallerUnit, Unit } from '../box'
-import { className, cx, leftRadius, px, rightRadius } from '../styling/Css'
+import { className, cx, leftRadius, px, rightRadius } from '../styling'
 
 export function Tag(props: BoxProps) {
   const { className, ...rest } = props

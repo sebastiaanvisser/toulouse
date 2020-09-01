@@ -7,7 +7,7 @@ import { circleShape, layers, Shape, offsetAsIcon } from '../icon/Shape'
 import { Memo, memo1 } from '../lib/Memo'
 import { useValue, Var } from '../lib/Var'
 import { Palette } from '../styling'
-import { className, cx } from '../styling/Css'
+import { className, cx } from '../styling'
 import { Rgba } from '../styling/Rgba'
 import { Icon } from './Icon'
 

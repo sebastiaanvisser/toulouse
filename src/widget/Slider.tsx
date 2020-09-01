@@ -11,7 +11,7 @@ import { pt } from '../lib/Geometry'
 import { Range, range } from '../lib/Range'
 import { useControlledVar, useValue, Var } from '../lib/Var'
 import { Hover, PrimaryColor } from '../styling'
-import { className, cx } from '../styling/Css'
+import { className, cx } from '../styling'
 import { Panel } from './Panel'
 
 export interface SliderProps extends FocusProps {

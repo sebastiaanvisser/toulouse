@@ -6,7 +6,7 @@ import { FocusProps, useFocusableProps } from '../dyn/Focus'
 import { Dimensions } from '../lib/Geometry'
 import { useStateDeepEquals } from '../lib/Hooks'
 import { useValue, Var } from '../lib/Var'
-import { className, cx, px, Rule } from '../styling/Css'
+import { className, cx, px, Rule } from '../styling'
 
 export interface Pos {
   line: number

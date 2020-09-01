@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server'
 import { Unit } from '../box/Unit'
 import { BezierPoint, Point } from '../lib/Geometry'
 import { range } from '../lib/Range'
-import { cx } from '../styling/Css'
+import { cx } from '../styling'
 import { Rgba } from '../styling/Rgba'
 
 export const offsetAsIcon = (shape: Shape) => shape.d(Unit / 2, Unit / 2)

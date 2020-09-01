@@ -23,7 +23,7 @@ import { memo1, Once } from '../lib/Memo'
 import { range } from '../lib/Range'
 import { useControlledVar, Value, Var } from '../lib/Var'
 import { Bg, Day } from '../styling'
-import { className, cx, px, style } from '../styling/Css'
+import { className, cx, px, style } from '../styling'
 import { Icon } from './Icon'
 import { Panel } from './Panel'
 

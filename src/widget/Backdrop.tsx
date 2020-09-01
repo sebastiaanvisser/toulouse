@@ -4,7 +4,7 @@ import { useResolvedPalette } from '../box/Paletted'
 import { layers, rect, shapeAsDataUri } from '../icon/Shape'
 import { memo1 } from '../lib/Memo'
 import { Palette } from '../styling'
-import { className, cx, pct } from '../styling/Css'
+import { className, cx, pct } from '../styling'
 import { Rgba } from '../styling/Rgba'
 
 interface Props extends BoxProps {
