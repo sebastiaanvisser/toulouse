@@ -17,6 +17,7 @@ export class Range_ {
   }
 
   at(n: number) {
+    if (n === this.from) return 0
     return (n - this.from) / this.delta()
   }
 
