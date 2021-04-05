@@ -199,6 +199,7 @@ export function Slider_(props: SliderProps & Context) {
   }
 
   const renderThumb = (value: number) => {
+    if (limit.delta() === 0) return <></>
     const left = Math.round(limit.remap(trackRange(), value) - Thumb / 2)
     return wrapHandle(
       <Panel
