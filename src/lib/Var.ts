@@ -1,8 +1,9 @@
 import { List } from 'immutable'
 import isEqual from 'lodash.isequal'
 import * as React from 'react'
-import { Lens } from './Edit'
+import { Edit } from './Edit'
 import { Iso } from './Iso'
+import { Lens } from './Lens'
 import { Revive } from './Revive'
 
 // ----------------------------------------------------------------------------
@@ -201,7 +202,7 @@ export class Var<A> implements Value<A> {
   }
 
   censor(f: (a: A, old: A) => A): Var<A> {
-    return this.zoom(
+    return this.extend(
       a => a,
       (v, old) => f(v, old)
     )
@@ -216,7 +217,7 @@ export class Var<A> implements Value<A> {
     return b
   }
 
-  zoom<B>(f: (a: A) => B, g: (b: B, old: A) => A): Var<B> {
+  extend<B>(f: (a: A) => B, g: (b: B, old: A) => A): Var<B> {
     const b = new Var(f(this.get()))
     b.listenToVar<A>(this, v => b.set(f(v)))
     b.get = () => f(this.get())
@@ -238,15 +239,22 @@ export class Var<A> implements Value<A> {
     return b
   }
 
-  lens<T>(f: Lens<A, T>): Var<T> {
-    return this.zoom(
+  zoom<T>(f: Lens<A, T>): Var<T> {
+    return this.extend(
+      o => f.get(o),
+      (v, o) => f.set(v)(o)
+    )
+  }
+
+  zoom1<T>(f: (a: A) => Edit<A, T>): Var<T> {
+    return this.extend(
       o => f(o).get,
       (v, o) => f(o).set(v)
     )
   }
 
   iso<B>({ fw, bw }: Iso<A, B>): Var<B> {
-    return this.zoom(fw, bw)
+    return this.extend(fw, bw)
   }
 
   // --------------------------------------------
@@ -254,7 +262,7 @@ export class Var<A> implements Value<A> {
   total<B>(this: Var<B | undefined>): Var<B> | undefined {
     const v = this.get()
     return is(v)
-      ? this.zoom(
+      ? this.extend(
           a => (is(a) ? a : v),
           a => a
         )
@@ -266,7 +274,7 @@ export class Var<A> implements Value<A> {
   }
 
   or<B>(this: Var<B | undefined>, def: B): Var<B> {
-    return this.zoom(
+    return this.extend(
       a => (is(a) ? a : def),
       a => a
     )
@@ -280,7 +288,7 @@ export class Var<A> implements Value<A> {
   }
 
   partial(): Var<A | undefined> {
-    return this.zoom<A | undefined>(
+    return this.extend<A | undefined>(
       a => a,
       (v, o) => (is(v) ? v : o)
     )
@@ -291,7 +299,7 @@ export class Var<A> implements Value<A> {
   }
 
   prop<B extends Object, P extends keyof B>(this: Var<B>, p: P): Var<B[P]> {
-    return this.zoom(
+    return this.extend(
       a => a[p],
       (b, a) => {
         const o = { ...a, [p]: b }
@@ -301,7 +309,7 @@ export class Var<A> implements Value<A> {
   }
 
   by<B>(this: Var<Record<string, B>>, p: string): Var<B | undefined> {
-    return this.zoom(
+    return this.extend(
       a => a[p] as B | undefined,
       (b, a) => {
         const { [p]: _, ...rest } = a
@@ -311,49 +319,49 @@ export class Var<A> implements Value<A> {
   }
 
   lookup<B>(this: Var<{ [key: string]: B }>, key: string): Var<B | undefined> {
-    return this.zoom<B | undefined>(
+    return this.extend<B | undefined>(
       a => a[key],
       (b, a) => update(a, key, b)
     )
   }
 
   find<B>(this: Var<List<B>>, p: (b: B) => boolean): Var<B | undefined> {
-    return this.zoom(
+    return this.extend(
       a => a.find(p),
       (b, a) => (b ? a.map(c => (p(c) ? b : c)) : a.filter(c => !p(c)))
     )
   }
 
   at<B>(this: Var<List<B>>, ix: number, fallback?: B): Var<B> {
-    return this.zoom<B>(
+    return this.extend<B>(
       xs => xs.get(ix) ?? (fallback as B),
       (x, xs) => xs.set(ix, x)
     )
   }
 
   first<B>(this: Var<List<B>>): Var<B | undefined> {
-    return this.zoom(
+    return this.extend(
       xs => xs.first(),
       (x, xs) => (x !== undefined ? xs.shift().unshift(x) : xs)
     )
   }
 
   last<B>(this: Var<List<B>>): Var<B | undefined> {
-    return this.zoom(
+    return this.extend(
       xs => xs.last(),
       (x, xs) => (x !== undefined ? xs.pop().push(x) : xs)
     )
   }
 
   findA<B>(this: Var<B[]>, p: (b: B) => boolean): Var<B | undefined> {
-    return this.zoom(
+    return this.extend(
       a => a.find(p),
       (b, a) => (b ? a.map(c => (p(c) ? b : c)) : a.filter(c => !p(c)))
     )
   }
 
   atA<B>(this: Var<B[]>, ix: number): Var<B> {
-    return this.zoom<B>(
+    return this.extend<B>(
       xs => xs[ix],
       (x, xs) => [...xs.slice(0, ix), x, ...xs.slice(ix + 1)]
     )
@@ -372,7 +380,7 @@ export class Var<A> implements Value<A> {
   }
 
   negation(this: Var<boolean>): Var<boolean> {
-    return this.zoom(
+    return this.extend(
       b => !b,
       b => !b
     )

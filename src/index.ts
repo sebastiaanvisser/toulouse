@@ -8,6 +8,7 @@ export { serverSideRenderCss, useNextJsPageTransition } from './styling/Css'
 
 export * from './lib/Var'
 export * from './lib/Edit'
+export * from './lib/Lens'
 export * from './lib/Hooks'
 export * from './lib/Iso'
 export * from './lib/Geometry'

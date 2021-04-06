@@ -116,7 +116,7 @@ export function RadioOptions<A extends string>(props: RadioOptionsProps<A>) {
   const { values, value } = props
 
   const is = (key: A) =>
-    value.zoom(
+    value.extend(
       k => k === key,
       (k, o) => (k ? key : o)
     )

@@ -31,7 +31,7 @@ export function Sliders() {
 
   const value0_inv = useMemo(
     () =>
-      value0.zoom(
+      value0.extend(
         v => 220 - v,
         v => 220 - v
       ),

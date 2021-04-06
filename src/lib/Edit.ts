@@ -1,5 +1,6 @@
 import { List } from 'immutable'
 import { Iso } from './Iso'
+import { Lens } from './Lens'
 
 export class Edit<O, I> {
   constructor(
@@ -29,7 +30,11 @@ export class Edit<O, I> {
   }
 
   zoom<K>(f: Lens<I, K>): Edit<O, K> {
-    return editor<O, K>(f(this.get).get, k => this.set(f(this.get).set(k)))
+    return editor<O, K>(f.get(this.get), k => this.set(f.set(k)(this.get)))
+  }
+
+  zoom1<K>(f: (i: I) => Edit<I, K>): Edit<O, K> {
+    return this.zoom(new Lens(f))
   }
 
   prop<P extends keyof I>(p: P): Edit<O, I[P]> {
@@ -91,32 +96,25 @@ export class Edit<O, I> {
 
   static packL = <O, U>(
     obj: { [P in keyof U]: (f: Edit<O, O>) => Edit<O, U[P]> }
-  ): Lens<O, U> => o => {
-    const id = Edit.Id(o)
-    const out = {} as U
-    for (let p in obj) out[p] = obj[p](id).get
-    return editor<O, U>(out, u => {
-      for (let p in obj) o = obj[p](Edit.Id(o)).set(u[p])
-      return o
+  ): Lens<O, U> =>
+    new Lens(o => {
+      const id = Edit.Id(o)
+      const out = {} as U
+      for (let p in obj) out[p] = obj[p](id).get
+      return editor<O, U>(out, u => {
+        for (let p in obj) o = obj[p](Edit.Id(o)).set(u[p])
+        return o
+      })
     })
-  }
 
   static Id = <O>(o: O): Edit<O, O> => editor(o, o => o)
+
+  static prop = <O, P extends keyof O>(o: O, p: P): Edit<O, O[P]> => edit(o).prop(p)
 }
 
 export const edit = <O>(o: O): Edit<O, O> => Edit.Id(o)
 
-export const prop = <O, P extends keyof O>(o: O, p: P): Edit<O, O[P]> => edit(o).prop(p)
-
 export const editor = <O, I>(get: I, set: (i: I) => O) => new Edit(get, set)
-
-// ----------------------------------------------------------------------------
-
-export type Lens<O, I> = (o: O) => Edit<O, I>
-
-export const idL = <O>(): Lens<O, O> => o => Edit.Id(o)
-
-export const propL = <O, P extends keyof O>(p: P): Lens<O, O[P]> => o => edit(o).prop(p)
 
 // ----------------------------------------------------------------------------
 

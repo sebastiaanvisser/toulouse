@@ -134,7 +134,7 @@ export function IconsDemo() {
                     zoom={zoom}
                     pad={pad}
                     position={i >= icons.length / 2 ? 'top' : 'bottom'}
-                    active={active.zoom(
+                    active={active.extend(
                       a => a === kv[0],
                       (x, _o) => (x ? kv[0] : undefined)
                     )}
