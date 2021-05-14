@@ -10,6 +10,7 @@ import { style } from '../styling/Rule'
 export interface Props {
   bg?: ColorLike
   fg?: ColorLike
+  opacity?: number
 }
 
 const bgC = memo1((c: Rgba) =>
@@ -25,12 +26,16 @@ const fgC = memo1((c: Rgba) =>
   })
 )
 
+const opacityC = memo1((opacity: number) => style({ opacity }))
+
 export function classes(props: Props, p: Palette): string {
+  const { opacity } = props
   const fg = resolve(props.fg, p, p.Fg)
   const bg = resolve(props.bg, p, p.Bg)
   return cx(
     bg && bgC.get(bg),
-    fg && fgC.get(fg) //
+    fg && fgC.get(fg),
+    opacity !== undefined && opacityC.get(opacity) //
   )
 }
 
