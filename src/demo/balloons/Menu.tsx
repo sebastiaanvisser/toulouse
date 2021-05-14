@@ -19,7 +19,9 @@ export function MenuDemo(props: { defs: DemoDef[] }) {
   const active = useVar('tags')
   const isActive = useValue(active)
 
-  const close = (_v: string) => window.setTimeout(() => open.set(false), 500)
+  const close = (_v: string) => {
+    window.setTimeout(() => open.set(false), 500)
+  }
 
   useEffect(() => active.effect(close), [])
 

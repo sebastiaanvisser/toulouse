@@ -34,12 +34,13 @@ export const W =
 // ----------------------------------------------------------------------------
 
 export type Listener<A> = (a: A, o?: A) => void
+export type Effect<A> = (a: A, o?: A) => void | Uninstaller
 export type Uninstaller = () => void
 export type Installer = () => Uninstaller
 
 export interface Value<A> {
   get(): A
-  effect(cb: Listener<A>, run?: boolean): Uninstaller
+  effect(cb: Effect<A>, run?: boolean): Uninstaller
   listenDown(cb: Listener<A>): Uninstaller
   map<B>(f: (a: A) => B): Value<B>
   bind<B>(f: (a: A, o?: A) => Value<B>): Value<B>
@@ -80,13 +81,26 @@ export class Var<A> implements Value<A> {
     xs.length = i + 1
   }
 
-  effect(cb: Listener<A>, run = false): Uninstaller {
-    this.effects.push(cb)
+  effect(cb: Effect<A>, run = false): Uninstaller {
+    let un: void | Uninstaller
+
+    // Wrapped handler in the case of uninstallers
+    const wrapped = (a: A, o?: A): void => {
+      if (un) un()
+      un = cb(a, o)
+    }
+
+    this.effects.push(wrapped)
     if (W) W.effects++
     const ix = this.effects.length - 1
     this.maybeInstall()
-    if (run === true) cb(this.get(), undefined)
+
+    // Possible initial run, when requested
+    if (run === true) wrapped(this.get(), undefined)
+
+    // Uninstaller
     return () => {
+      if (un) un()
       delete this.effects[ix]
       if (W) W.effects--
       Var.trim(this.effects)
