@@ -59,7 +59,7 @@ export class IconDef {
 
 export type Def =
   | { tag: 'id' }
-  | { tag: 'node'; node: ReactElement }
+  | { tag: 'node'; node: (children: ReactNode) => ReactElement; hash: number }
   | { tag: 'translate'; translate: [number, number] }
   | { tag: 'rotate'; rotate: number }
   | { tag: 'scale'; scale: [number, number] }
@@ -67,6 +67,7 @@ export type Def =
   | { tag: 'gradient'; a: string; b: string; rot?: number | [Point, Point] }
   | { tag: 'stroke'; stroke: string }
   | { tag: 'strokeWidth'; strokeWidth: number }
+  | { tag: 'dashed'; dashed: number[] }
   | { tag: 'opacity'; opacity: number }
   | { tag: 'clip'; clip: Shape }
   | { tag: 'mask'; mask: Shape }
@@ -156,6 +157,10 @@ export class Shape {
     return new Shape({ tag: 'stroke', stroke: stroke.toString() }, [this])
   }
 
+  dashed(...dashed: number[]) {
+    return new Shape({ tag: 'dashed', dashed }, [this])
+  }
+
   width(strokeWidth: number) {
     return new Shape({ tag: 'strokeWidth', strokeWidth }, [this])
   }
@@ -228,7 +233,13 @@ export class Shape {
         )
       case 'stroke':
         return (
-          <g key={hash} className="JAJAJ" stroke={tr.stroke}>
+          <g key={hash} stroke={tr.stroke}>
+            {cs}
+          </g>
+        )
+      case 'dashed':
+        return (
+          <g key={hash} strokeDasharray={tr.dashed.join(' ')}>
             {cs}
           </g>
         )
@@ -265,7 +276,7 @@ export class Shape {
           </g>
         )
       case 'node':
-        return tr.node
+        return tr.node(cs)
       default:
         return tr /* never */
     }
@@ -328,21 +339,21 @@ export class Shape {
   // ----------------------------------------------------------------------------
   // Primitive shapes
 
-  static node = (node: ReactElement, hash: number) =>
-    new Shape({ tag: 'node', node }, [], hash)
+  static node = (node: (children: ReactNode) => ReactElement, hash = 0, ...cs: Shape[]) =>
+    new Shape({ tag: 'node', node, hash }, cs)
 
   static poly(...poly: (Point | BezierPoint)[]): Shape {
     const renderC = ({ c, d, p }: BezierPoint) => `C${c.fmt()} ${d.fmt()} ${p.fmt()}`
     const ds = poly.map(pt => ('c' in pt ? renderC(pt) : pt.fmt()))
     const d = `M${ds.join(' ')} Z`
     const hash = H.build('Shape.poly', H.build(d))
-    return Shape.node(<path key={hash} d={d} />, hash)
+    return Shape.node(() => <path key={hash} d={d} />, hash)
   }
 
   static rect(w: number, h: number, r?: number): Shape {
     const hash = H.build('Shape.rect', w, h, r)
     return Shape.node(
-      <rect key={hash} x={-w / 2} y={-h / 2} width={w} height={h} rx={r} ry={r} />,
+      () => <rect key={hash} x={-w / 2} y={-h / 2} width={w} height={h} rx={r} ry={r} />,
       hash
     )
   }
@@ -350,33 +361,35 @@ export class Shape {
   static line(...poly: Point[]): Shape {
     const points = poly.flatMap(({ x, y }) => [x, y]).join(' ')
     const hash = H.build('Shape.line', points)
-    return Shape.node(<polyline key={hash} fill="none" points={points} />, hash)
+    return Shape.node(() => <polyline key={hash} fill="none" points={points} />, hash)
   }
 
   static text(t: string, w?: number, fontFamily?: string): Shape {
     const hash = H.build('Shape.text', t, w, fontFamily)
     return Shape.node(
-      <text
-        key={hash}
-        className={svgTextC.className()}
-        style={{ fontWeight: w, fontFamily }}
-        textAnchor="middle"
-        alignmentBaseline="central"
-      >
-        {t}
-      </text>,
+      () => (
+        <text
+          key={hash}
+          className={svgTextC.className()}
+          style={{ fontWeight: w, fontFamily }}
+          textAnchor="middle"
+          alignmentBaseline="central"
+        >
+          {t}
+        </text>
+      ),
       hash
     ).dy(4.5)
   }
 
   static path(d: string): Shape {
     const hash = H.build('Shape.path', d)
-    return Shape.node(<path key={hash} d={d} />, hash)
+    return Shape.node(() => <path key={hash} d={d} />, hash)
   }
 
   static circle(r: number): Shape {
     const hash = H.build('Shape.circle', r)
-    return Shape.node(<circle key={hash} r={r} />, hash)
+    return Shape.node(() => <circle key={hash} r={r} />, hash)
   }
 
   // ----------------------------------------------------------------------------
