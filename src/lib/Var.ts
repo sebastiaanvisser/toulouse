@@ -66,7 +66,7 @@ export class Var<A> implements Value<A> {
   installed: { uninstall: Uninstaller; install: Installer }[] = []
   effects: Listener<A>[] = []
 
-  constructor(private v: A, private eq = isEqual) {}
+  constructor(private v: A, public eq = isEqual) {}
 
   dispose() {
     this.installed.forEach(i => i.uninstall())
