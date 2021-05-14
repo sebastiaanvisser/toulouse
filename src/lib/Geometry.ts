@@ -298,6 +298,11 @@ export class Rect {
   }
 
   static zero = new Rect(0, 0, 0, 0)
+
+  static left = (x: number) => new Rect(x, 0, 0, 0)
+  static top = (y: number) => new Rect(0, y, 0, 0)
+  static right = (x: number) => new Rect(0, 0, x, 0)
+  static bottom = (y: number) => new Rect(0, 0, 0, y)
 }
 
 // ----------------------------------------------------------------------------
