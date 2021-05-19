@@ -464,6 +464,23 @@ export class Var<A> implements Value<A> {
     return o
   }
 
+  delay(): Value<A> {
+    var o = new Var(this.get())
+    let bucket = () => {}
+    o.listenToVar(
+      this,
+      v => {
+        bucket = () => o.set(v)
+        window.queueMicrotask(() => {
+          bucket()
+          bucket = () => {}
+        })
+      },
+      true // run on install
+    )
+    return o
+  }
+
   throttle(t: number): Value<A> {
     var o = new Var(this.get())
     let x = -1
