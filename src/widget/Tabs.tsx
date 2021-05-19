@@ -5,10 +5,11 @@ import { Theme, usePalette } from '../box/Themed'
 import { Unit } from '../box/Unit'
 import { kappa } from '../icon/Icons'
 import { Shape, shapeAsDataUri } from '../icon/Shape'
-import { BezierPoint, Point } from '../lib/Geometry'
+import { BezierPoint, Point, Rect } from '../lib/Geometry'
 import { memo1, memo2, memo3 } from '../lib/Memo'
 import { useValue, Var } from '../lib/Var'
 import { cx, px } from '../styling/Classy'
+import { Bg, Fg } from '../styling/Color'
 import { Palette } from '../styling/Palette'
 import { className, style } from '../styling/Rule'
 import { ClassSelector, Hover_ } from '../styling/Selector'
@@ -19,13 +20,11 @@ export interface TabDef<A> {
   props?: BoxProps
 }
 
-export type Def<A> = TabDef<A> | { content: ReactNode } | undefined | null | false
-
-interface TabsProps<A> extends BoxProps {
-  active: Var<A | undefined>
-  tabs: Def<A>[]
-  tabProps?: BoxProps
+export interface TabProps {
+  joiner?: boolean
 }
+
+export type Def<A> = TabDef<A> | { content: ReactNode } | undefined | null | false
 
 function Tab<A extends string | number>(
   props: {
@@ -35,9 +34,11 @@ function Tab<A extends string | number>(
     isActive: boolean
     setActive: () => void
     corner: ClassSelector
-  } & BoxProps
+  } & BoxProps &
+    TabProps
 ) {
-  const { def, bgPalette, fgPalette, isActive, setActive, corner, ...rest } = props
+  const { def, bgPalette, fgPalette, isActive, setActive, corner, joiner, ...rest } =
+    props
 
   return (
     <Theme palette={isActive ? fgPalette : undefined}>
@@ -53,7 +54,7 @@ function Tab<A extends string | number>(
         )}
       >
         <Box
-          clip
+          // clip
           button={!isActive}
           bg={isActive ? true : undefined}
           onMouseDown={setActive}
@@ -61,12 +62,22 @@ function Tab<A extends string | number>(
           {...rest}
           {...def.props}
           blunt
+          fg={Fg}
         >
           {def.label}
+          {joiner && <Box abs bg={Bg} {...new Rect(-10, 30, -10, -10)} />}
         </Box>
       </Box>
     </Theme>
   )
+}
+
+interface TabsProps<A> extends BoxProps {
+  active: Var<A | undefined>
+  tabs: Def<A>[]
+  tabProps?: (active: boolean) => BoxProps & TabProps
+  bgPalette?: Palette
+  onSwitch?: (tab: A) => void
 }
 
 function cornerClass<A>(props: TabsProps<A>) {
@@ -78,29 +89,43 @@ function cornerClass<A>(props: TabsProps<A>) {
 }
 
 export function Tabs<A extends string | number>(props: TabsProps<A>) {
-  const { active, tabs, children, tabProps, ...rest } = props
+  const {
+    active,
+    tabs,
+    children,
+    bgPalette,
+    onSwitch,
+    tabProps = () => {},
+    ...rest
+  } = props
 
-  const bgPalette = usePalette()
   const fgPalette = usePalette()
-  const isActive = useValue(active)
+  const curActive = useValue(active)
   const corner = cornerClass(props)
 
   const definition = (def: Def<A>, i: number) => {
     if (!def) return
 
-    if ('tab' in def)
+    if ('tab' in def) {
+      const isActive = def.tab === curActive
       return (
-        <Tab
-          def={def}
-          bgPalette={bgPalette}
-          fgPalette={fgPalette}
-          key={def.tab}
-          isActive={def.tab === isActive}
-          setActive={() => props.active.set(def.tab)}
-          corner={corner}
-          {...tabProps}
-        />
+        <Theme palette={isActive ? fgPalette : bgPalette}>
+          <Tab
+            def={def}
+            bgPalette={bgPalette ?? fgPalette}
+            fgPalette={fgPalette}
+            key={def.tab}
+            isActive={isActive}
+            setActive={() => {
+              props.active.set(def.tab)
+              if (onSwitch) onSwitch(def.tab)
+            }}
+            corner={corner}
+            {...tabProps(isActive)}
+          />
+        </Theme>
       )
+    }
 
     if ('content' in def) {
       return <Fragment key={i}>{def.content}</Fragment>
