@@ -23,6 +23,7 @@ export interface SliderProps {
   dots?: number | number[]
   focus?: Var<boolean>
   wrapThumb?: (handle: ReactElement) => ReactNode
+  onChange?: (value: number) => void
   onStartDragging?: () => void
   onStopDragging?: () => void
 }
@@ -115,6 +116,7 @@ export function Slider_(props: SliderProps & Context) {
     step,
     stick,
     snap,
+    onChange,
     onStartDragging,
     onStopDragging
   } = props
@@ -220,6 +222,7 @@ export function Slider_(props: SliderProps & Context) {
     const v = trackRange().remap(limit, x)
     const vR = round(v)
     props.value.set(vR)
+    if (onChange) onChange(vR)
   }
 
   // ------------------------------------------------------------------------
