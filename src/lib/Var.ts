@@ -557,8 +557,8 @@ export class Var<A> implements Value<A> {
     return out
   }
 
-  static partial<A>() {
-    return new Var<A | undefined>(undefined)
+  static partial<A>(v?: A) {
+    return new Var<A | undefined>(v)
   }
 
   // ----------------------------------------------------------------------------
