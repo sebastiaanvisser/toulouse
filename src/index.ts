@@ -13,6 +13,7 @@ export * from './lib/Hooks'
 export * from './lib/Iso'
 export * from './lib/Geometry'
 export * from './lib/Range'
+export * from './lib/Revive'
 
 export * from './styling/Rule'
 export * from './styling/Selector'
@@ -25,6 +26,8 @@ export * from './styling/Classy'
 
 export * from './icon/Shape'
 export * from './icon/Icons'
+
+export * from './dyn/Attach'
 
 export { Tabs } from './widget/Tabs'
 export { Listbox } from './widget/Listbox'
