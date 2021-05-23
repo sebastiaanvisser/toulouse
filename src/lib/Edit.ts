@@ -112,7 +112,7 @@ export class Edit<O, I> {
   static prop = <O, P extends keyof O>(o: O, p: P): Edit<O, O[P]> => edit(o).prop(p)
 }
 
-export const edit = <O>(o: O): Edit<O, O> => Edit.Id(o)
+export const edit = <O extends P, P = O>(o: O): Edit<O, P> => Edit.Id(o) as any
 
 export const editor = <O, I>(get: I, set: (i: I) => O) => new Edit(get, set)
 
