@@ -8,6 +8,8 @@ export class Edit<O, I> {
     readonly set: (i: I) => O //
   ) {}
 
+  // Getting and modifying
+
   setting(i: I): Edit<O, O> {
     return Edit.Id(this.set(i))
   }
@@ -25,66 +27,87 @@ export class Edit<O, I> {
     return [this.set(i), a]
   }
 
-  iso<K>(iso: Iso<I, K>): Edit<O, K> {
-    return editor<O, K>(iso.fw(this.get), k => this.set(iso.bw(k)))
+  // Zooming in
+
+  iso<A>(iso: Iso<I, A>): Edit<O, A> {
+    return new Edit<O, A>(iso.fw(this.get), k => this.set(iso.bw(k)))
   }
 
-  zoom<K>(f: Lens<I, K>): Edit<O, K> {
-    return editor<O, K>(f.get(this.get), k => this.set(f.set(k)(this.get)))
+  zoom<A>(f: Lens<I, A>): Edit<O, A> {
+    return new Edit<O, A>(f.get(this.get), k => this.set(f.set(k)(this.get)))
   }
 
-  zoom1<K>(f: (i: I) => Edit<I, K>): Edit<O, K> {
+  zoom1<A>(f: (i: I) => Edit<I, A>): Edit<O, A> {
     return this.zoom(new Lens(f))
   }
 
+  // Object related utilities
+
   prop<P extends keyof I>(p: P): Edit<O, I[P]> {
-    return editor<O, I[P]>(this.get[p], ip =>
+    return new Edit<O, I[P]>(this.get[p], ip =>
       this.modify(i => {
+        if (i[p] === ip) return i // when values are equal, don't update
         const o = { ...i, [p]: ip }
         return 'copy' in i ? (i as any).copy(o) : o
       })
     )
   }
 
-  at<E>(this: Edit<O, List<E>>, ix: number): Edit<O, E | undefined> {
-    return editor<O, E | undefined>(this.get.get(ix), e =>
+  // Immutable list related utilities
+
+  at<A>(this: Edit<O, List<A>>, ix: number): Edit<O, A | undefined> {
+    return new Edit<O, A | undefined>(this.get.get(ix), e =>
       this.modify(i => (e ? i.set(ix, e) : i))
     )
   }
 
-  first<E>(this: Edit<O, List<E>>): Edit<O, E | undefined> {
+  first<A>(this: Edit<O, List<A>>): Edit<O, A | undefined> {
     return this.at(0)
   }
 
-  last<E>(this: Edit<O, List<E>>): Edit<O, E | undefined> {
+  last<A>(this: Edit<O, List<A>>): Edit<O, A | undefined> {
     return this.at(this.get.size - 1)
   }
 
-  find<B>(this: Edit<O, List<B>>, pred: (b: B) => boolean): Edit<O, B> {
-    return editor<O, B>(this.get.find(pred) as B, b =>
+  find<A>(this: Edit<O, List<A>>, pred: (b: A) => boolean): Edit<O, A> {
+    return new Edit<O, A>(this.get.find(pred) as A, b =>
       this.modify(i => i.map(c => (pred(c) ? b : c)))
     )
   }
 
-  pop<B>(this: Edit<O, List<B>>): O {
+  pop<A>(this: Edit<O, List<A>>): O {
     return this.modify(xs => xs.pop())
   }
 
-  push<B>(this: Edit<O, List<B>>, x: B): O {
+  push<A>(this: Edit<O, List<A>>, x: A): O {
     return this.modify(xs => xs.push(x))
   }
 
-  assume<X>(this: Edit<O, X | undefined>): Edit<O, X> {
-    return this as Edit<O, X>
+  insert<A>(this: Edit<O, List<A>>, ix: number, v: A): O {
+    return this.modify(xs => xs.insert(ix, v))
   }
 
-  or<X>(this: Edit<O, X | undefined>, x: X): Edit<O, X> {
-    return editor<O, X>(this.get ?? x, this.set)
+  delete<A>(this: Edit<O, List<A>>, ix: number): O {
+    return this.modify(xs => xs.delete(ix))
+  }
+
+  // Partial value utilities
+
+  assume<A>(this: Edit<O, A | undefined>): Edit<O, A> {
+    return this as Edit<O, A>
+  }
+
+  // Boolean related utilities
+
+  or<A>(this: Edit<O, A | undefined>, x: A): Edit<O, A> {
+    return new Edit<O, A>(this.get ?? x, this.set)
   }
 
   toggle(this: Edit<O, boolean>): O {
     return this.modify(b => !b)
   }
+
+  // Numeric related utilities
 
   mul(this: Edit<O, number>, v: number) {
     return this.modify(c => c * v)
@@ -94,27 +117,14 @@ export class Edit<O, I> {
     return this.modify(c => c + v)
   }
 
-  static packL = <O, U>(
-    obj: { [P in keyof U]: (f: Edit<O, O>) => Edit<O, U[P]> }
-  ): Lens<O, U> =>
-    new Lens(o => {
-      const id = Edit.Id(o)
-      const out = {} as U
-      for (let p in obj) out[p] = obj[p](id).get
-      return editor<O, U>(out, u => {
-        for (let p in obj) o = obj[p](Edit.Id(o)).set(u[p])
-        return o
-      })
-    })
+  // Create special edits
 
-  static Id = <O>(o: O): Edit<O, O> => editor(o, o => o)
+  static Id = <O>(o: O): Edit<O, O> => new Edit(o, o => o)
 
   static prop = <O, P extends keyof O>(o: O, p: P): Edit<O, O[P]> => edit(o).prop(p)
 }
 
 export const edit = <O extends P, P = O>(o: O): Edit<O, P> => Edit.Id(o) as any
-
-export const editor = <O, I>(get: I, set: (i: I) => O) => new Edit(get, set)
 
 // ----------------------------------------------------------------------------
 

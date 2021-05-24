@@ -1,5 +1,5 @@
 import { px } from '../styling/Classy'
-import { editor } from './Edit'
+import { Edit } from './Edit'
 import { Iso } from './Iso'
 import { range } from './Range'
 
@@ -98,8 +98,8 @@ export class Position {
   static combine = (topLeft: Position, bottomRight: Position) =>
     new Rect(topLeft.left, topLeft.top, bottomRight.left, bottomRight.top)
 
-  static Left = (p: Position) => editor(p.left, left => new Position(left, p.top))
-  static Top = (p: Position) => editor(p.top, top => new Position(p.left, top))
+  static Left = (p: Position) => new Edit(p.left, left => new Position(left, p.top))
+  static Top = (p: Position) => new Edit(p.top, top => new Position(p.left, top))
 }
 
 // ----------------------------------------------------------------------------
