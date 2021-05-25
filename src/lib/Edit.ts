@@ -83,12 +83,28 @@ export class Edit<O, I> {
     return this.modify(xs => xs.push(x))
   }
 
+  shift<A>(this: Edit<O, List<A>>): O {
+    return this.modify(xs => xs.shift())
+  }
+
+  unshift<A>(this: Edit<O, List<A>>, x: A): O {
+    return this.modify(xs => xs.unshift(x))
+  }
+
   insert<A>(this: Edit<O, List<A>>, ix: number, v: A): O {
     return this.modify(xs => xs.insert(ix, v))
   }
 
   delete<A>(this: Edit<O, List<A>>, ix: number): O {
     return this.modify(xs => xs.delete(ix))
+  }
+
+  slice<A>(this: Edit<O, List<A>>, begin?: number, end?: number): O {
+    return this.modify(xs => xs.slice(begin, end))
+  }
+
+  concat<A>(this: Edit<O, List<A>>, other: List<A>): O {
+    return this.modify(xs => xs.concat(other))
   }
 
   // Partial value utilities
