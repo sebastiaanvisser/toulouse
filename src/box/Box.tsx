@@ -19,6 +19,7 @@ export interface EventProps<E> {
   onMouseUp?: React.MouseEventHandler<E>
   onMouseOver?: React.MouseEventHandler<E>
   onMouseOut?: React.MouseEventHandler<E>
+  onMouseMove?: React.MouseEventHandler<E>
   onMouseEnter?: React.MouseEventHandler<E>
   onMouseLeave?: React.MouseEventHandler<E>
   onScroll?: React.UIEventHandler<E>
@@ -82,6 +83,7 @@ export function Box(props: BoxProps) {
     onMouseUp,
     onMouseOver,
     onMouseOut,
+    onMouseMove,
     onMouseEnter,
     onMouseLeave,
     onKeyDown,
@@ -140,6 +142,7 @@ export function Box(props: BoxProps) {
     onMouseUp,
     onMouseOver,
     onMouseOut,
+    onMouseMove,
     onMouseEnter,
     onMouseLeave,
     onKeyDown,
