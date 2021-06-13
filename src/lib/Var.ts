@@ -44,6 +44,7 @@ export interface Value<A> {
   listenDown(cb: Listener<A>): Uninstaller
   map<B>(f: (a: A) => B): Value<B>
   bind<B>(f: (a: A, o?: A) => Value<B>): Value<B>
+  prop<B extends Object, P extends keyof B>(this: Value<B>, p: P): Value<B[P]>
   lookup<B>(this: Value<{ [key: string]: B }>, key: string): Value<B | undefined>
   batch(): Value<A>
   find<B>(this: Value<List<B>>, p: (b: B) => boolean): Value<B | undefined>
