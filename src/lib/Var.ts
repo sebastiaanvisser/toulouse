@@ -570,17 +570,17 @@ export class Var<A> implements Value<A> {
   ): Value<Z> => Var.pack({ a, b }).map(({ a, b }, o) => f(a, b, o && o.a, o && o.b))
 
   static lift3 = <A, B, C, Z>(
-    a: Var<A>,
-    b: Var<B>,
-    c: Var<C>,
+    a: Value<A>,
+    b: Value<B>,
+    c: Value<C>,
     f: (a: A, b: B, c: C) => Z
   ): Value<Z> => Var.pack({ a, b, c }).map(({ a, b, c }) => f(a, b, c))
 
   static lift4 = <A, B, C, D, Z>(
-    a: Var<A>,
-    b: Var<B>,
-    c: Var<C>,
-    d: Var<D>,
+    a: Value<A>,
+    b: Value<B>,
+    c: Value<C>,
+    d: Value<D>,
     f: (a: A, b: B, c: C, d: D) => Z
   ): Value<Z> => Var.pack({ a, b, c, d }).map(({ a, b, c, d }) => f(a, b, c, d))
 }
