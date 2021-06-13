@@ -665,8 +665,21 @@ export interface UseProps<A> {
   children?: (a: A) => React.ReactNode | undefined
 }
 
-export function Use<A>(props: UseProps<A>) {
-  const { value, children } = props
-  const v = useValue(value)
-  return React.createElement(React.Fragment, { children: children ? children(v) : v })
+export interface UseMaybeProps<A> {
+  maybe: Var<A | undefined> | Value<A | undefined>
+  children?: (a: A) => React.ReactNode | undefined
+}
+
+export function Use<A>(props: UseProps<A> | UseMaybeProps<A>) {
+  const { children } = props
+
+  if ('value' in props) {
+    const v = useValue(props.value)
+    return React.createElement(React.Fragment, { children: children ? children(v) : v })
+  } else {
+    const v = useValue(props.maybe)
+    return React.createElement(React.Fragment, {
+      children: v ? (children ? children(v) : v) : undefined
+    })
+  }
 }
