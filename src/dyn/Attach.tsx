@@ -24,7 +24,7 @@ export const useAttachment = () => useContext(AttachCtx)
 // ----------------------------------------------------------------------------
 
 interface Props {
-  attachment: () => ReactNode
+  attachment: ReactNode | (() => ReactNode)
   inside?: boolean
   children: ReactElement
   elem?: (el: HTMLElement) => void
@@ -56,7 +56,11 @@ export function Attach(props: Props) {
     <Use value={Var.pack({ target, geom })}>
       {({ target, geom }) =>
         target &&
-        geom && <AttachCtx.Provider value={{ target, geom }}>{node()}</AttachCtx.Provider>
+        geom && (
+          <AttachCtx.Provider value={{ target, geom }}>
+            {node instanceof Function ? node() : node}
+          </AttachCtx.Provider>
+        )
       }
     </Use>
   )
