@@ -117,8 +117,8 @@ export const Cavern: Palette = {
 
   Blue: Rgba.fromHex('#00bcd4'),
 
-  Primary: () => Desert,
-  Contrast: () => Arctic
+  Primary: () => Lava,
+  Contrast: () => Night
 }
 
 export const Desert: Palette = {
