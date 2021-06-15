@@ -1,5 +1,5 @@
 import { Palette } from './Palette'
-import { Rgba } from './Rgba'
+import { rgba, Rgba } from './Rgba'
 
 export class Color {
   constructor(readonly f: (palette: Palette) => Rgba) {}
@@ -35,6 +35,11 @@ export class Color {
   brighten(n = 0.1) {
     return this.map(c => (c.avg < 128 ? c.darken(n) : c.lighten(n)))
   }
+
+  static rgba = (r: number, g: number, b: number, a?: number) =>
+    new Color(() => rgba(r, g, b, a))
+
+  static fromHex = (hex: string) => new Color(() => Rgba.fromHex(hex))
 }
 
 export const solid = (rgba: Rgba) => new Color(() => rgba)
