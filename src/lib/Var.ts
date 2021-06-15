@@ -161,20 +161,22 @@ export class Var<A> implements Value<A> {
 
   private maybeInstall() {
     if (this.effects.length === 0 && this.downstreams.length === 0) return
-    this.pending.forEach(install => {
+    const pending = this.pending
+    this.pending = []
+    pending.forEach(install => {
       const uninstall = install()
       this.installed.push({ uninstall, install })
     })
-    this.pending = []
   }
 
   private maybeUninstall() {
     if (this.effects.length > 0 || this.downstreams.length > 0) return
-    this.installed.forEach(i => {
+    const installed = this.installed
+    this.installed = []
+    installed.forEach(i => {
       i.uninstall()
       this.pending.push(i.install)
     })
-    this.installed = []
   }
 
   private propagate(v: A, o: A) {
@@ -242,16 +244,19 @@ export class Var<A> implements Value<A> {
   }
 
   bind<B>(f: (a: A, o?: A) => Value<B>): Value<B> {
+    let inner: Value<B> = f(this.get())
     let un = () => {}
-    const b = new Var(f(this.get()).get())
-    b.listenToVar<A>(this, (v, o) => {
-      un()
-      const inner = f(v, o)
-      un = b.listenToVar(inner, w => {
-        b.set(w)
-      })
-    })
-    b.get = () => f(this.get()).get()
+    const b = new Var(inner.get())
+    b.listenToVar<A>(
+      this,
+      (v, o) => {
+        un()
+        inner = f(v, o)
+        un = b.listenToVar(inner, w => b.set(w))
+      },
+      true
+    )
+    b.get = () => inner.get()
     return b
   }
 
