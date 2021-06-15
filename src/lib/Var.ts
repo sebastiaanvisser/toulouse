@@ -46,9 +46,10 @@ export interface Value<A> {
   bind<B>(f: (a: A, o?: A) => Value<B>): Value<B>
   prop<B extends Object, P extends keyof B>(this: Value<B>, p: P): Value<B[P]>
   lookup<B>(this: Value<{ [key: string]: B }>, key: string): Value<B | undefined>
-  batch(): Value<A>
   find<B>(this: Value<List<B>>, p: (b: B) => boolean): Value<B | undefined>
   at<B>(this: Value<List<B>>, ix: number): Value<B>
+  batch(): Value<A>
+  queue(): Value<A>
   debounce(t: number): Value<A>
   throttle(t: number): Value<A>
   total<B>(this: Value<B | undefined>): Value<B> | undefined
@@ -447,6 +448,21 @@ export class Var<A> implements Value<A> {
     o.listenToVar(this, v => {
       window.cancelAnimationFrame(x)
       x = window.requestAnimationFrame(() => o.set(v))
+    })
+    return o
+  }
+
+  queue(): Value<A> {
+    var o = new Var(this.get())
+    let queued = false
+    o.listenToVar(this, v => {
+      if (!queued) {
+        queued = true
+        window.queueMicrotask(() => {
+          o.set(v)
+          queued = false
+        })
+      }
     })
     return o
   }
